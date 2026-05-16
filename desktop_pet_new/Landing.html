@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Pety · 一只真的会发呆的桌面宠物</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="pet.css">
+<link rel="stylesheet" href="voice.css">
+<link rel="stylesheet" href="extras.css?v=6">
+<style>
+  html, body { background: #0b0b0f; overflow-x: hidden; }
+  body { overflow-y: auto; }
+  .landing {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    color: var(--text-primary);
+    font-family: var(--font-sc);
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(242,166,140,0.5), transparent 50%),
+      radial-gradient(ellipse at 80% 85%, rgba(204,107,158,0.45), transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(153,102,229,0.3), transparent 65%),
+      linear-gradient(140deg, #1a1420 0%, #13101a 50%, #0d0a14 100%);
+    background-attachment: fixed;
+  }
+  .landing::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(242,191,77,0.12), transparent 30%),
+      radial-gradient(circle at 85% 70%, rgba(77,184,173,0.15), transparent 40%);
+    z-index: 0;
+  }
+  .landing-grain {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    background-image:
+      repeating-radial-gradient(circle at 13% 27%, rgba(255,255,255,0.5) 0, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 3px),
+      repeating-radial-gradient(circle at 71% 65%, rgba(0,0,0,0.5) 0, rgba(0,0,0,0.5) 1px, transparent 1px, transparent 4px);
+  }
+  .landing-container {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+
+  /* ─────── nav ─────── */
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(20px);
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-en);
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: 0.08em;
+  }
+  .nav-brand-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--orange);
+    box-shadow: 0 0 14px rgba(242,153,128,0.8);
+    animation: pulse-dot 2.4s ease-in-out infinite;
+  }
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .nav-links a { color: inherit; text-decoration: none; transition: color 0.2s; cursor: pointer; }
+  .nav-links a:hover { color: var(--text-primary); }
+  .nav-cta {
+    padding: 9px 18px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.12s;
+  }
+  .nav-cta:hover { background: rgba(255,255,255,0.14); }
+
+  /* ─────── hero ─────── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 48px;
+    padding: 60px 0 80px;
+    align-items: center;
+    min-height: 72vh;
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(242,191,77,0.12);
+    border: 1px solid rgba(242,191,77,0.25);
+    color: var(--yellow);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-family: var(--font-en), var(--font-sc);
+    font-size: 68px;
+    line-height: 1.02;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, rgb(242,166,140), rgb(242,191,77), rgb(204,107,158));
+    background-clip: text; -webkit-background-clip: text;
+    color: transparent;
+  }
+  .hero p.lead {
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 36px;
+    max-width: 480px;
+  }
+  .hero-cta-row {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 28px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgb(242,166,140), rgb(204,107,158));
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 10px 30px rgba(242,107,158,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 34px rgba(242,107,158,0.55); }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 32px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+  .hero-meta b { color: var(--text-primary); font-weight: 700; }
+
+  /* hero visual — pet on a pedestal */
+  .hero-visual {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-pet-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-pet-stage::before {
+    content: "";
+    position: absolute;
+    bottom: 18%;
+    left: 18%;
+    right: 18%;
+    height: 30%;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(242,153,128,0.4), transparent 70%);
+    filter: blur(30px);
+    animation: hero-glow 4s ease-in-out infinite;
+  }
+  @keyframes hero-glow {
+    0%,100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  .hero-pet {
+    position: relative;
+    animation: float 5s ease-in-out infinite;
+    z-index: 2;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  .hero-chip {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 14px;
+    background: rgba(26,26,33,0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 3;
+  }
+  .hero-chip-1 { top: 14%; left: -8%; animation: float-chip 6s ease-in-out infinite; }
+  .hero-chip-2 { top: 44%; right: -8%; animation: float-chip 7s ease-in-out infinite 1.5s; }
+  .hero-chip-3 { bottom: 14%; left: 8%; animation: float-chip 5.5s ease-in-out infinite 0.8s; }
+  @keyframes float-chip {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .hero-chip-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .dot-green { background: var(--green-dim); box-shadow: 0 0 10px var(--green-dim); }
+  .dot-yellow { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
+  .dot-pink { background: rgb(229,102,191); box-shadow: 0 0 10px rgb(229,102,191); }
+
+  /* ─────── section base ─────── */
+  section.block {
+    padding: 100px 0;
+    position: relative;
+  }
+  .block-eyebrow {
+    font-family: var(--font-en);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--orange);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .block-title {
+    font-family: var(--font-en), var(--font-sc);
+    font-weight: 800;
+    font-size: 44px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+    max-width: 680px;
+  }
+  .block-lead {
+    font-size: 17px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* ─────── features grid ─────── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 56px;
+  }
+  .feature-card {
+    position: relative;
+    padding: 28px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(30px);
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .feature-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.16); }
+  .feature-card.large { grid-column: span 2; }
+  .feature-visual {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 12px -12px 18px;
+    min-height: 160px;
+    position: relative;
+  }
+  .feature-label {
+    font-family: var(--font-en);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ─────── voice demo row ─────── */
+  .voice-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+    margin-top: 64px;
+    padding: 48px;
+    border-radius: 28px;
+    background: rgba(26,20,40,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(30px);
+    overflow: hidden;
+    position: relative;
+  }
+  .voice-demo-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    position: relative;
+  }
+  .voice-demo-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+  .voice-demo-ctrl {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .voice-demo-ctrl.active { background: rgba(128,191,255,0.15); color: var(--blue); border-color: rgba(128,191,255,0.3); }
+
+  /* ─────── gallery ─────── */
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 56px;
+  }
+  .gallery-item {
+    aspect-ratio: 3/4;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: transform 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .gallery-item:hover { transform: translateY(-6px); }
+  .gallery-item .pet-wrap { flex: 1; display: flex; align-items: center; justify-content: center; }
+  .gallery-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 4px;
+  }
+  .gallery-sub {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+
+  /* ─────── footer ─────── */
+  footer {
+    padding: 60px 0 40px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 80px;
+  }
+  footer b { color: var(--text-secondary); font-weight: 600; }
+
+  /* ─────── final CTA ─────── */
+  .final-cta {
+    text-align: center;
+    padding: 120px 0;
+    position: relative;
+  }
+  .final-cta h2 {
+    font-size: 64px;
+    line-height: 1.05;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+  }
+  .final-cta h2 em {
+    font-style: normal;
+    background: linear-gradient(135deg, rgb(242,191,77), rgb(242,107,158));
+    background-clip: text; -webkit-background-clip: text;
+    color: transparent;
+  }
+  .final-cta p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+  }
+
+  /* responsive-ish */
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 48px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .feature-card.large { grid-column: auto; }
+    .voice-demo { grid-template-columns: 1fr; padding: 32px; }
+    .gallery { grid-template-columns: repeat(2, 1fr); }
+    .final-cta h2 { font-size: 44px; }
+    .nav-links { display: none; }
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script type="text/babel" src="Pet.jsx"></script>
+<script type="text/babel" src="VoiceVisuals.jsx"></script>
+
+<script type="text/babel">
+const Landing = () => {
+  const [voiceStage, setVoiceStage] = React.useState("idle");
+  const [petState, setPetState] = React.useState("happy");
+  const stages = [
+    { id: "idle", label: "待机" },
+    { id: "listening", label: "聆听" },
+    { id: "thinking", label: "思考" },
+    { id: "speaking", label: "回答" },
+  ];
+  const petStates = ["idle", "happy", "sad", "sleep", "peek", "poke"];
+  React.useEffect(() => {
+    const id = setInterval(() => setPetState(s => {
+      const i = petStates.indexOf(s);
+      return petStates[(i + 1) % petStates.length];
+    }), 3500);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="landing">
+      <div className="landing-grain"></div>
+      <div className="landing-container">
+
+        <nav className="nav">
+          <div className="nav-brand">
+            <span className="nav-brand-dot"></span>
+            <span>PETY</span>
+          </div>
+          <div className="nav-links">
+            <a onClick={()=>document.getElementById("features")?.scrollIntoView({behavior:"smooth"})}>能力</a>
+            <a onClick={()=>document.getElementById("voice")?.scrollIntoView({behavior:"smooth"})}>语音</a>
+            <a onClick={()=>document.getElementById("forms")?.scrollIntoView({behavior:"smooth"})}>形态</a>
+            <a href="App.html">控制台 →</a>
+          </div>
+          <a href="App.html" className="nav-cta">打开应用</a>
+        </nav>
+
+        {/* hero */}
+        <section className="hero">
+          <div>
+            <div className="hero-eyebrow">● 桌面 AI 宠物 · v0.4 beta</div>
+            <h1>一只真的会<br/><em>发呆、偷看、插嘴</em><br/>的桌面宠物。</h1>
+            <p className="lead">Pety 在你屏幕的角落生活。它记得你几点下班、哪个标签页你盯了最久，会在你开会时突然跳出来说一句废话——然后自己躲回去。</p>
+            <div className="hero-cta-row">
+              <a href="App.html" className="btn-primary">打开控制台 →</a>
+              <button className="btn-secondary" onClick={()=>document.getElementById("voice")?.scrollIntoView({behavior:"smooth"})}>看它怎么说话</button>
+            </div>
+            <div className="hero-meta">
+              <span>已经陪伴了 <b>14,200</b> 个桌面</span>
+              <span>平均每天被戳 <b>37</b> 次</span>
+            </div>
+          </div>
+          <div className="hero-visual">
+            <div className="hero-pet-stage">
+              <div className="hero-chip hero-chip-1"><span className="hero-chip-dot dot-green"></span>偷偷看着你</div>
+              <div className="hero-chip hero-chip-2"><span className="hero-chip-dot dot-yellow"></span>今天心情愉悦</div>
+              <div className="hero-chip hero-chip-3"><span className="hero-chip-dot dot-pink"></span>被摸头了 +1</div>
+              <div className="hero-pet">
+                <Pet size={320} hue={25} state={petState} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* features */}
+        <section className="block" id="features">
+          <div className="block-eyebrow">它会做什么</div>
+          <h2 className="block-title">不是会动的 icon。<br/>是真的有点自己想法的同桌。</h2>
+          <p className="block-lead">从摸头、偷看、插嘴到全屏躲开——每个反应都是你自己调出来的。配置面板用大白话，不用写一行代码。</p>
+
+          <div className="feature-grid">
+            <div className="feature-card">
+              <div className="feature-visual">
+                <Pet size={120} hue={25} state="peek" />
+              </div>
+              <div className="feature-label">偷看后台</div>
+              <div className="feature-title">知道你在摸鱼</div>
+              <div className="feature-desc">前台窗口变化它都知道。看你在 figma，它就安静；切回代码，它就开始说话。</div>
+            </div>
+            <div className="feature-card large">
+              <div className="feature-visual">
+                <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                  <Pet size={100} hue={25} state="happy" />
+                  <div style={{
+                    background:"rgba(255,255,255,0.06)",
+                    padding:"10px 16px",
+                    borderRadius:"16px 16px 16px 4px",
+                    fontSize:14,
+                    maxWidth:220,
+                    border:"1px solid rgba(255,255,255,0.08)"
+                  }}>"你今天已经说了 8 次'马上做完'了。"</div>
+                </div>
+              </div>
+              <div className="feature-label">插嘴模式</div>
+              <div className="feature-title">实时对话 + 语音</div>
+              <div className="feature-desc">文本、语音、吐槽、安慰——接入任何大模型。响应快到像身边有人，但这个人不会嫌你烦。</div>
+            </div>
+            <div className="feature-card">
+              <div className="feature-visual">
+                <div style={{position:"relative"}}>
+                  <Pet size={120} hue={200} state="idle" />
+                </div>
+              </div>
+              <div className="feature-label">多形态</div>
+              <div className="feature-title">换一只</div>
+              <div className="feature-desc">内置 4 只，支持 gif / png / Live 2D 自定义。明天不想看它，就换一只。</div>
+            </div>
+            <div className="feature-card">
+              <div className="feature-visual">
+                <Pet size={120} hue={25} state="sleep" />
+              </div>
+              <div className="feature-label">懂规矩</div>
+              <div className="feature-title">全屏时自动躲开</div>
+              <div className="feature-desc">可自定义禁区、允许区。放视频、打游戏、屏幕共享——它自己跑。</div>
+            </div>
+            <div className="feature-card large">
+              <div className="feature-visual">
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,width:"100%",padding:"0 24px"}}>
+                  {["开心","难过","吃醋","求摸","睡觉","炸毛","偷看","眨眼"].map((t,i)=>(
+                    <div key={i} style={{
+                      padding:"8px 0",
+                      textAlign:"center",
+                      borderRadius:10,
+                      background: i===0?"rgba(102,178,255,0.15)":"rgba(255,255,255,0.05)",
+                      color: i===0?"var(--blue)":"var(--text-secondary)",
+                      fontSize:12,
+                      border:i===0?"1px solid rgba(128,191,255,0.3)":"1px solid transparent"
+                    }}>{t}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="feature-label">动作编排</div>
+              <div className="feature-title">给每个情绪写一段台词</div>
+              <div className="feature-desc">用自然语言告诉它：开心时眯眼晃头；吃醋时背对你；被戳肚子要跳开。</div>
+            </div>
+          </div>
+        </section>
+
+        {/* voice demo */}
+        <section className="block" id="voice">
+          <div className="block-eyebrow">语音对话</div>
+          <h2 className="block-title">不再是等待动画。<br/>是一个会先"嗯…"的同伴。</h2>
+          <p className="block-lead">聆听、思考、回答——三个状态各有专属可视化。知道它在想，你就不会打断它。</p>
+
+          <div className="voice-demo">
+            <div className="voice-demo-visual">
+              <VoiceOrb variant="mercury" state={voiceStage} hue={260} sensitivity={0.8} size={220} />
+            </div>
+            <div>
+              <div className="label" style={{marginBottom:12, color:"var(--text-tertiary)"}}>当前状态</div>
+              <div style={{fontSize:32, fontWeight:800, marginBottom:12}}>
+                {stages.find(s=>s.id===voiceStage).label}
+              </div>
+              <div style={{fontSize:15, color:"var(--text-secondary)", lineHeight:1.6, minHeight:72}}>
+                {voiceStage==="idle" && "小球安静地呼吸，等你说话。"}
+                {voiceStage==="listening" && "线条向内聚拢，跟着你声音起伏。"}
+                {voiceStage==="thinking" && "快速翻转和粒子涌动——有时候它真的需要 3 秒。"}
+                {voiceStage==="speaking" && "声波从中心向两侧释放，节奏跟随语音输出。"}
+              </div>
+              <div className="voice-demo-controls">
+                {stages.map(s=>(
+                  <button key={s.id} className={`voice-demo-ctrl ${voiceStage===s.id?"active":""}`} onClick={()=>setVoiceStage(s.id)}>{s.label}</button>
+                ))}
+              </div>
+              <div style={{
+                marginTop: 28,
+                padding: "14px 18px",
+                borderRadius: 12,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                fontSize: 13,
+                color: "var(--text-tertiary)",
+                lineHeight: 1.6
+              }}>
+                💡 延迟不是问题。让用户知道"它在想"才是。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* forms gallery */}
+        <section className="block" id="forms">
+          <div className="block-eyebrow">形态库</div>
+          <h2 className="block-title">想换就换。</h2>
+          <p className="block-lead">内置 4 只。Live 2D 模型、3D 立绘、自定义 gif——统统支持。</p>
+
+          <div className="gallery">
+            {[
+              { hue: 25, name: "Q 版小狗", sub: "默认 · 最呆", state: "idle" },
+              { hue: 45, name: "小黄鸭", sub: "聒噪 · 爱插嘴", state: "happy" },
+              { hue: 160, name: "薄荷鸟", sub: "慢热 · 容易害羞", state: "peek" },
+              { hue: 300, name: "夜光精灵", sub: "夜猫子 · 会发光", state: "sleep" },
+            ].map((p,i)=>(
+              <div key={i} className="gallery-item">
+                <div className="pet-wrap"><Pet size={140} hue={p.hue} state={p.state} /></div>
+                <div className="gallery-name">{p.name}</div>
+                <div className="gallery-sub">{p.sub}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* final cta */}
+        <section className="final-cta">
+          <h2>让屏幕角落<br/>多一个<em>不嫌你烦</em>的人。</h2>
+          <p>桌面版 · macOS / Windows · 永久免费</p>
+          <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}>
+            <a href="App.html" className="btn-primary">打开控制台</a>
+            <button className="btn-secondary">下载客户端</button>
+          </div>
+        </section>
+
+        <footer>
+          <div style={{display:"flex",gap:24,justifyContent:"center",marginBottom:16,flexWrap:"wrap"}}>
+            <a href="#" style={{color:"var(--text-secondary)",textDecoration:"none"}}>文档</a>
+            <a href="#" style={{color:"var(--text-secondary)",textDecoration:"none"}}>隐私</a>
+            <a href="#" style={{color:"var(--text-secondary)",textDecoration:"none"}}>更新日志</a>
+            <a href="#" style={{color:"var(--text-secondary)",textDecoration:"none"}}>GitHub</a>
+          </div>
+          <div>© 2025 Pety · made with 🐾 by a couple of humans who also needed the company</div>
+        </footer>
+
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("app-root")).render(<Landing />);
+</script>
+</body>
+</html>

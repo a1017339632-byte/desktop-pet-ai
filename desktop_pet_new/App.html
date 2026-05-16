@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Pety · Desktop Pet</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="pet.css">
+<link rel="stylesheet" href="voice.css">
+<link rel="stylesheet" href="extras.css?v=7">
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ws-bridge.jsx"></script>
+<script type="text/babel" src="Pet.jsx"></script>
+<script type="text/babel" src="VoiceVisuals.jsx"></script>
+<script type="text/babel" src="Sidebar.jsx"></script>
+<script type="text/babel" src="HomePage.jsx"></script>
+<script type="text/babel" src="MonitorPage.jsx"></script>
+<script type="text/babel" src="ChatPage.jsx"></script>
+<script type="text/babel" src="AreaPage.jsx"></script>
+<script type="text/babel" src="TouchPage.jsx"></script>
+<script type="text/babel" src="FormSwitchPage.jsx"></script>
+<script type="text/babel" src="VoiceCallOverlay.jsx"></script>
+<script type="text/babel" src="DiaryPage.jsx"></script>
+<script type="text/babel" src="MemoryPage.jsx"></script>
+<script type="text/babel" src="SettingsPage.jsx"></script>
+
+<script type="text/babel">
+// Global config names (loaded from apiConfig, used by all pages)
+window.__petConfig = { charName: '', userName: '' };
+if (window.electronAPI && window.electronAPI.getApiConfig) {
+  window.electronAPI.getApiConfig().then(cfg => {
+    if (cfg.charName) window.__petConfig.charName = cfg.charName;
+    if (cfg.userName) window.__petConfig.userName = cfg.userName;
+  });
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "petHue": 25,
+  "orbVariant": "wire",
+  "orbHue": 260,
+  "sensitivity": 0.7,
+  "showWave": true,
+  "showGrain": true,
+}/*EDITMODE-END*/;
+
+const App = () => {
+  const [tweaks, setTweakValue] = useTweaks(TWEAK_DEFAULTS);
+  const [page, setPage] = React.useState("home");
+  const [voiceOpen, setVoiceOpen] = React.useState(false);
+  const [petState, setPetState] = React.useState("idle");
+  const [selectedEmotion, setSelectedEmotion] = React.useState("开心");
+  const relay = useRelay();
+  const desktopBg = useDesktopBlur();
+
+  React.useEffect(() => {
+    if (relay.emotion && relay.emotion !== "idle") {
+      setPetState(relay.emotion);
+    }
+  }, [relay.emotion]);
+
+  // Subtle idle reactions: cycle through blink/idle; on emotion pick reflect briefly
+  React.useEffect(() => {
+    if (page !== "animation" || !selectedEmotion) return;
+    const map = { "开心": "happy", "难过": "sad", "吃醋": "sad", "发呆": "idle", "睡觉": "sleep", "跑动": "run", "亲热": "happy", "求摸": "happy", "偷看": "peek", "眨眼": "idle", "冷漠": "idle", "炸毛": "poke", "吵闹": "happy", "看书": "idle", "戴墨镜": "idle", "写文件": "idle", "翻网页": "idle" };
+    const st = map[selectedEmotion] || "idle";
+    setPetState(st);
+    const id = setTimeout(() => setPetState("idle"), 2400);
+    return () => clearTimeout(id);
+  }, [selectedEmotion, page]);
+
+  const petMood = ({idle:"心情愉悦",happy:"很开心",sad:"有点失落",sleep:"打盹中",run:"跑来跑去",peek:"偷偷观察",poke:"惊到了",thinking:"思考中",listening:"听着呢",speaking:"说话中"})[petState] || "心情愉悦";
+
+  const bg = "transparent";
+
+  const renderPage = () => {
+    switch (page) {
+      case "home": return <HomePage tweaks={tweaks} petState={petState} relay={relay} />;
+      case "animation": return <AnimationPage tweaks={tweaks} petState={petState} selectedEmotion={selectedEmotion} setSelectedEmotion={setSelectedEmotion} />;
+      case "monitor": return <MonitorPage tweaks={tweaks} petState={petState} relay={relay} />;
+      case "chat": return <ChatPage tweaks={tweaks} relay={relay} />;
+      case "area": return <AreaPage tweaks={tweaks} petState={petState} />;
+      case "touch": return <TouchPage tweaks={tweaks} />;
+      case "form": return <FormSwitchPage tweaks={tweaks} setTweakValue={setTweakValue} />;
+      case "diary": return <DiaryPage tweaks={tweaks} petState={petState} />;
+      case "memory": return <MemoryPage tweaks={tweaks} />;
+      case "settings": return <SettingsPage tweaks={tweaks} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="app-root">
+      <div className="shell">
+        <Sidebar active={page} onNav={setPage} petMood={petMood} connected={relay.connected} online={relay.online} />
+        <div className="main-area">
+          {renderPage()}
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="背景氛围">
+          <TweakToggle label="颗粒质感" value={tweaks.showGrain} onChange={v=>setTweakValue("showGrain", v)} />
+        </TweakSection>
+        <TweakSection title="Pet">
+          <TweakSlider label="色相" value={tweaks.petHue} onChange={v=>setTweakValue("petHue", v)} min={0} max={360} step={5} />
+          <TweakRadio label="测试状态" value={petState} options={[
+            { value: "idle", label: "待机" },
+            { value: "happy", label: "开心" },
+            { value: "sad", label: "难过" },
+            { value: "sleep", label: "睡觉" },
+            { value: "peek", label: "偷看" },
+            { value: "poke", label: "戳" },
+          ]} onChange={v=>setPetState(v)} />
+        </TweakSection>
+        <TweakSection title="语音小球">
+          <TweakRadio label="样式" value={tweaks.orbVariant} options={[
+            { value: "mercury", label: "水银" },
+            { value: "glass", label: "琉璃" },
+            { value: "plasma", label: "等离子" },
+            { value: "wire", label: "线框" },
+          ]} onChange={v=>setTweakValue("orbVariant", v)} />
+          <TweakSlider label="小球色相" value={tweaks.orbHue} onChange={v=>setTweakValue("orbHue", v)} min={0} max={360} step={5} />
+          <TweakSlider label="灵敏度" value={tweaks.sensitivity} onChange={v=>setTweakValue("sensitivity", v)} min={0.2} max={1.5} step={0.05} />
+          <TweakToggle label="声波可视化" value={tweaks.showWave} onChange={v=>setTweakValue("showWave", v)} />
+          <TweakButton label="打开通话界面" onClick={()=>setVoiceOpen(true)} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("app-root")).render(<App />);
+</script>
+</body>
+</html>

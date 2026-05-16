@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "desktoppet": {
+      "command": "node",
+      "args": ["server.js"],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}"
+    }
+  }
+}
