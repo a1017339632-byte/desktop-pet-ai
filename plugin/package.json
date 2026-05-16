@@ -1,0 +1,13 @@
+{
+  "name": "claude-pet-channel",
+  "version": "0.1.0",
+  "description": "Desktop pet channel plugin for Claude Code",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ws": "^8.18.0"
+  }
+}

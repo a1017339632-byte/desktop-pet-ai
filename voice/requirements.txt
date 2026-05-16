@@ -1,0 +1,7 @@
+sounddevice
+faster-whisper
+soundfile
+scipy
+pygame
+requests
+numpy

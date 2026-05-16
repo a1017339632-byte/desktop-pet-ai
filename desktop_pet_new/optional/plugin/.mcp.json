@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "desktoppet": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server.js"],
+      "env": {
+        "RELAY_URL": "ws://119.91.115.102:8765",
+        "DIARY_URL": "http://119.91.115.102:9801",
+        "SCREENTIME_URL": "http://119.91.115.102:9527"
+      }
+    }
+  }
+}

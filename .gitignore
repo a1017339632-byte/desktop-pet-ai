@@ -1,0 +1,9 @@
+node_modules/
+dist/
+voice/models/
+desktop_pet_new/node_modules/
+desktop_pet_new/dist/
+src-tauri/target/
+*.exe
+stt_result*.txt
+desktop_pet.zip

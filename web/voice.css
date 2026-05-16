@@ -1,0 +1,229 @@
+/* =========================================================
+   VoiceVisuals — 声浪与思考脉冲
+   ========================================================= */
+
+/* ——— GPT 单球 ——— */
+.vorb { position: relative; flex-shrink: 0; aspect-ratio: 1 / 1; }
+
+.vorb-gpt-body {
+  position: absolute; inset: 12%;
+  border-radius: 50%;
+  animation: gpt-spin 12s linear infinite;
+  filter: blur(1px);
+  box-shadow:
+    inset 0 0 30px rgba(255,255,255,0.2),
+    0 0 40px oklch(0.75 0.2 var(--hue) / 0.5);
+}
+.vorb-gpt-inner {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  filter: blur(2px);
+}
+.vorb-gpt-noise {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(255,255,255,0.3), transparent 40%),
+    radial-gradient(ellipse at 70% 70%, rgba(0,0,0,0.2), transparent 45%);
+  mix-blend-mode: overlay;
+}
+.vorb-gpt-halo {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(0.8 0.2 var(--hue) / 0.4), transparent 70%);
+  filter: blur(8px);
+}
+@keyframes gpt-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+/* state overrides */
+.vorb-gpt.vorb-idle .vorb-gpt-body { animation: gpt-spin 30s linear infinite, gpt-idle 4s ease-in-out infinite; }
+.vorb-gpt.vorb-listening .vorb-gpt-body { animation: gpt-spin 8s linear infinite, gpt-listen 0.7s ease-in-out infinite; }
+.vorb-gpt.vorb-speaking .vorb-gpt-body { animation: gpt-spin 6s linear infinite, gpt-speak 0.35s ease-in-out infinite; }
+.vorb-gpt.vorb-thinking .vorb-gpt-body { animation: gpt-spin 14s linear infinite, gpt-think 1.5s ease-in-out infinite; }
+@keyframes gpt-idle {
+  0%,100% { transform: scale(1); border-radius: 50%; }
+  50% { transform: scale(1.03); border-radius: 48% 52% 53% 47% / 50% 48% 52% 50%; }
+}
+@keyframes gpt-listen {
+  0%,100% { transform: scale(calc(1 + 0.03 * var(--sens, 1))); border-radius: 48% 52% 53% 47% / 50% 48% 52% 50%; }
+  50% { transform: scale(calc(1 + 0.12 * var(--sens, 1))); border-radius: 54% 46% 47% 53% / 46% 54% 46% 54%; }
+}
+@keyframes gpt-speak {
+  0% { transform: scale(0.95); border-radius: 50%; }
+  30% { transform: scale(calc(1 + 0.18 * var(--sens, 1))); border-radius: 56% 44% 48% 52% / 48% 52% 48% 52%; }
+  60% { transform: scale(calc(1 + 0.1 * var(--sens, 1))); border-radius: 44% 56% 52% 48% / 52% 48% 52% 48%; }
+  100% { transform: scale(1); border-radius: 50%; }
+}
+@keyframes gpt-think {
+  0%,100% { transform: scale(0.85); filter: blur(1px) brightness(1); }
+  50% { transform: scale(1.05); filter: blur(1px) brightness(1.15); }
+}
+
+/* ——— 环形光波 ——— */
+.vorb-halo-core {
+  position: absolute; inset: 32%;
+  border-radius: 50%;
+  box-shadow: 0 0 30px oklch(0.75 0.2 var(--hue) / 0.6);
+}
+.vorb-halo-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid oklch(0.78 0.17 var(--hue) / 0.4);
+}
+.vorb-halo-ring-1 { inset: 20%; }
+.vorb-halo-ring-2 { inset: 10%; }
+.vorb-halo-ring-3 { inset: 0; }
+
+.vorb-halo.vorb-idle .vorb-halo-core { animation: halo-idle-core 4s ease-in-out infinite; }
+.vorb-halo.vorb-idle .vorb-halo-ring { animation: halo-idle-ring 4s ease-in-out infinite; }
+.vorb-halo.vorb-idle .vorb-halo-ring-2 { animation-delay: 0.5s; }
+.vorb-halo.vorb-idle .vorb-halo-ring-3 { animation-delay: 1s; }
+
+.vorb-halo.vorb-speaking .vorb-halo-core { animation: halo-speak-core 0.4s ease-in-out infinite; }
+.vorb-halo.vorb-speaking .vorb-halo-ring { animation: halo-ring-expand 1.4s ease-out infinite; }
+.vorb-halo.vorb-speaking .vorb-halo-ring-2 { animation-delay: 0.45s; }
+.vorb-halo.vorb-speaking .vorb-halo-ring-3 { animation-delay: 0.9s; }
+
+.vorb-halo.vorb-thinking .vorb-halo-core { animation: halo-think-core 1.5s ease-in-out infinite; }
+.vorb-halo.vorb-thinking .vorb-halo-ring { animation: halo-think-ring 1.5s ease-in-out infinite; }
+
+@keyframes halo-idle-core { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes halo-idle-ring { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.03); } }
+@keyframes halo-speak-core { 0%,100% { transform: scale(calc(1 + 0.08 * var(--sens, 1))); } 50% { transform: scale(calc(1 + 0.25 * var(--sens, 1))); } }
+@keyframes halo-ring-expand {
+  0% { transform: scale(0.7); opacity: 0.9; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+@keyframes halo-think-core { 0%,100% { transform: scale(0.85); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
+@keyframes halo-think-ring { 0%,100% { transform: scale(0.9); opacity: 0.3; } 50% { transform: scale(1.05); opacity: 0.6; } }
+
+/* ——— 多层错位 ——— */
+.vorb-multi-layer {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(14px);
+  mix-blend-mode: screen;
+}
+.vorb-multi-l1 { inset: 8%; animation: multi-drift-1 5s ease-in-out infinite; }
+.vorb-multi-l2 { inset: 12%; animation: multi-drift-2 6s ease-in-out infinite; }
+.vorb-multi-l3 { inset: 16%; animation: multi-drift-3 4.5s ease-in-out infinite; }
+.vorb-multi-core {
+  position: absolute; inset: 28%;
+  border-radius: 50%;
+}
+@keyframes multi-drift-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%, -3%) scale(1.1); } }
+@keyframes multi-drift-2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-4%, 4%) scale(0.95); } }
+@keyframes multi-drift-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(3%, 2%) scale(1.08); } }
+
+.vorb-multi.vorb-speaking .vorb-multi-core { animation: speak-squish 0.4s ease-in-out infinite; }
+.vorb-multi.vorb-speaking .vorb-multi-l1 { animation-duration: 1.2s; }
+.vorb-multi.vorb-speaking .vorb-multi-l2 { animation-duration: 0.8s; }
+.vorb-multi.vorb-speaking .vorb-multi-l3 { animation-duration: 1s; }
+.vorb-multi.vorb-thinking .vorb-multi-core { animation: think-breathe 1.4s ease-in-out infinite; }
+@keyframes speak-squish {
+  0%,100% { transform: scale(calc(1 + 0.05 * var(--sens, 1))); border-radius: 50%; }
+  50% { transform: scale(calc(1 + 0.2 * var(--sens, 1))); border-radius: 48% 52% 46% 54%; }
+}
+@keyframes think-breathe { 0%,100% { transform: scale(0.85); } 50% { transform: scale(1.1); } }
+
+/* ——— 均衡器柱条 ——— */
+.wave-bars {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 20px;
+}
+.wave-bar {
+  width: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg,
+    oklch(0.8 0.18 var(--hue)),
+    oklch(0.7 0.2 calc(var(--hue) + 30)));
+  border-radius: 2px;
+  height: calc(8px + 40px * var(--base));
+  box-shadow: 0 0 8px oklch(0.75 0.2 var(--hue) / 0.4);
+}
+.wave-bars-speaking .wave-bar {
+  animation: bar-dance var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.wave-bars-listening .wave-bar {
+  animation: bar-listen var(--dur) ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+.wave-bars-idle .wave-bar {
+  animation: bar-idle 2.4s ease-in-out infinite;
+  animation-delay: var(--delay);
+  opacity: 0.5;
+}
+@keyframes bar-dance {
+  0%,100% { height: calc(6px + 14px * var(--base) * var(--sens, 1)); }
+  50% { height: calc(12px + 78px * var(--base) * var(--sens, 1)); }
+}
+@keyframes bar-listen {
+  0%,100% { height: calc(4px + 10px * var(--base) * var(--sens, 1)); }
+  50% { height: calc(6px + 24px * var(--base) * var(--sens, 1)); }
+}
+@keyframes bar-idle {
+  0%,100% { height: 4px; }
+  50% { height: calc(6px + 8px * var(--base)); }
+}
+
+/* ——— 思考脉冲 ——— */
+.tpulse { position: relative; }
+.tpulse-core {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 24px oklch(0.85 0.16 var(--hue) / 0.6);
+}
+
+.tpulse-breathe .tpulse-core { animation: tp-breathe 1.6s ease-in-out infinite; }
+@keyframes tp-breathe {
+  0%,100% { transform: scale(0.75); opacity: 0.7; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+.tpulse-flow .tpulse-core { animation: tp-breathe 1.8s ease-in-out infinite; }
+.tpulse-flow .tpulse-edge {
+  position: absolute; inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    oklch(0.9 0.16 var(--hue)),
+    oklch(0.75 0.2 calc(var(--hue) + 60)),
+    oklch(0.85 0.18 calc(var(--hue) - 40)),
+    oklch(0.9 0.16 var(--hue))
+  );
+  filter: blur(6px);
+  animation: tp-flow 3s linear infinite;
+  mask: radial-gradient(circle, transparent 48%, black 52%, black 60%, transparent 63%);
+  -webkit-mask: radial-gradient(circle, transparent 48%, black 52%, black 60%, transparent 63%);
+}
+@keyframes tp-flow { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+.tpulse-inner .tpulse-core {
+  animation: tp-breathe 1.8s ease-in-out infinite, tp-flow 4s linear infinite;
+  filter: blur(4px);
+}
+
+.tpulse-layered .tpulse-core { animation: tp-breathe 1.5s ease-in-out infinite; }
+.tpulse-layered .tpulse-halo {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(0.85 0.16 var(--hue) / 0.45), transparent 70%);
+}
+.tpulse-layered .tpulse-halo-1 { animation: tp-halo-1 1.8s ease-in-out infinite; }
+.tpulse-layered .tpulse-halo-2 { animation: tp-halo-2 2.2s ease-in-out infinite; }
+@keyframes tp-halo-1 {
+  0%,100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes tp-halo-2 {
+  0%,100% { transform: scale(1.1); opacity: 0.2; }
+  50% { transform: scale(1.8); opacity: 0; }
+}

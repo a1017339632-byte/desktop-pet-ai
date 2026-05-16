@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Pety</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; overflow: hidden; user-select: none; font-family: 'Noto Sans SC', sans-serif; width: 100vw; height: 100vh; }
+
+    #pet-wrap {
+      position: absolute;
+      width: 180px;
+      bottom: 60px;
+      right: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(213,114,71,0.92); border-radius: 12px;
+      padding: 8px 12px; font-size: 12px; color: #fff;
+      max-width: 320px; min-width: 180px; word-wrap: break-word; white-space: normal; line-height: 1.4;
+      margin-bottom: 6px; text-align: center;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .bubble.show { opacity: 1; }
+
+    #pet-container {
+      position: relative; display: inline-block;
+    }
+    #pet-img {
+      width: 150px; height: auto;
+      cursor: grab; transition: transform 0.15s;
+    }
+    #pet-img:active { cursor: grabbing; transform: scale(0.93); }
+
+    #bottom-bar {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 4px;
+    }
+
+    #status {
+      padding: 3px 8px; border-radius: 8px; font-size: 10px; white-space: nowrap;
+    }
+    #status.online { background: #768a5e; color: #fff; }
+    #status.server-only { background: #4a4543; color: #f0e0d0; }
+    #status.disconnected { background: #3c312c; color: #edc095; }
+
+    .bar-btn {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(208,116,86,0.9); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: white; transition: all 0.2s;
+    }
+    .bar-btn:hover { background: rgba(192,96,64,0.95); }
+    .bar-btn.active { background: rgba(102,178,102,0.9); }
+
+    #input-wrap {
+      display: none; align-items: center; gap: 4px;
+      margin-top: 4px;
+    }
+    #input-wrap.show { display: flex; }
+    #chat-input {
+      width: 140px; height: 28px;
+      background: rgba(183,206,198,0.95); border: none; border-radius: 8px;
+      padding: 4px 8px; font-size: 11px; color: #1a1a1a;
+      font-family: 'Noto Sans SC', sans-serif; outline: none; resize: none;
+    }
+    #input-send {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(208,116,86,0.9); border: none; cursor: pointer;
+      color: white; font-size: 12px;
+    }
+
+    #voice-indicator {
+      display: none; margin-top: 4px;
+      padding: 3px 10px; border-radius: 8px;
+      background: rgba(102,178,102,0.9); color: white; font-size: 10px;
+    }
+    #voice-indicator.show { display: block; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    #pet-img.walking { animation: spin 1s linear infinite; }
+    @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(0.9); } }
+    #pet-img.thinking { animation: breathe 1.5s ease-in-out infinite; }
+
+    .bubble code { background: rgba(0,0,0,0.2); padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+    .bubble pre { background: rgba(0,0,0,0.25); padding: 6px 8px; border-radius: 6px; overflow-x: auto; margin: 4px 0; }
+    .bubble pre code { background: none; padding: 0; }
+    .bubble p { margin: 2px 0; }
+    .bubble ul, .bubble ol { padding-left: 16px; margin: 2px 0; }
+    .bubble strong { font-weight: 600; }
+    .bubble a { color: #ffe0c0; text-decoration: underline; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div id="pet-wrap">
+    <div class="bubble" id="bubble"></div>
+    <div id="pet-container">
+      <img id="pet-img" src="assets/pet_idle.png" alt="pety" draggable="false">
+    </div>
+    <div id="bottom-bar">
+      <span id="status" class="disconnected">无连接</span>
+      <button class="bar-btn" id="chat-btn" title="发消息">💬</button>
+      <button class="bar-btn" id="voice-btn" title="语音">🎤</button>
+    </div>
+    <div id="input-wrap">
+      <input id="chat-input" placeholder="说话..." />
+      <button id="input-send">➤</button>
+    </div>
+    <div id="voice-indicator">自由麦开启中...</div>
+
+  </div>
+
+  <script>
+    const petWrap = document.getElementById('pet-wrap');
+    const petImg = document.getElementById('pet-img');
+    const bubble = document.getElementById('bubble');
+    const statusEl = document.getElementById('status');
+    const chatBtn = document.getElementById('chat-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const inputWrap = document.getElementById('input-wrap');
+    const chatInput = document.getElementById('chat-input');
+    const inputSend = document.getElementById('input-send');
+    const voiceIndicator = document.getElementById('voice-indicator');
+
+    const EMOTIONS = {
+      idle: 'assets/pet_idle.png', happy: 'assets/pet_idle.png',
+      angry: 'assets/pet_angry.png', shy: 'assets/pet_idle.png',
+      shocked: 'assets/pet_shocked.png'
+    };
+
+    // === Skin system ===
+    let currentSkin = localStorage.getItem('pety-skin') || 'default';
+    function buildSkin(name) {
+      const p = 'assets/skins/' + name + '/';
+      return {
+        idle: p+'idle.png', drag_start: p+'drag_start_left.gif', drag_mid: p+'drag_mid_left.gif', drag_end: p+'drag_end_left.gif',
+        walk_start: p+'walk_start.gif', walk_mid: p+'walk_mid.png', walk_end: p+'walk_end.gif',
+        hands_on_hips: p+'hands_on_hips.gif', proud: p+'proud.gif', shy: p+'shy.gif',
+        shocked: p+'shocked.gif', attention: p+'attention.gif', fall: p+'fall.gif',
+      };
+    }
+    const SKINS = { claude: buildSkin('claude'), gemini: buildSkin('gemini'), gpt: buildSkin('gpt') };
+    let skin = SKINS[currentSkin] || null;
+    function getIdleSrc() { return skin ? skin.idle : EMOTIONS.idle; }
+    if (skin) petImg.src = skin.idle;
+
+    let pokeCount = 0, bubbleTimer, isOnline = false;
+    let chatOpen = false, voiceMode = false;
+
+    // Configurable names (loaded from apiConfig)
+    let charName = 'Pety', userName = 'User';
+    if (window.electronAPI && window.electronAPI.getApiConfig) {
+      window.electronAPI.getApiConfig().then(cfg => {
+        if (cfg.charName) charName = cfg.charName;
+        if (cfg.userName) userName = cfg.userName;
+      });
+    }
+
+    // === Mouse enter/leave for click-through ===
+    petWrap.addEventListener('mouseenter', () => {
+      if (window.electronAPI) window.electronAPI.setInteractive(true);
+    });
+    petWrap.addEventListener('mouseleave', () => {
+      if (!dragging && window.electronAPI) window.electronAPI.setInteractive(false);
+    });
+
+    // === Drag / Poke / Pet detection ===
+    let dragging = false, dragOffX = 0, dragOffY = 0, dragTotalDist = 0;
+    let dragStartTime = 0, dirChanges = 0, lastMoveX = 0, maxDrift = 0;
+    let dragStartX = 0, dragStartY = 0;
+
+    let dragPhase = null; // null, 'start', 'mid'
+
+    petImg.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      dragTotalDist = 0;
+      dirChanges = 0;
+      lastMoveX = 0;
+      maxDrift = 0;
+      dragPhase = null;
+      dragStartTime = Date.now();
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const rect = petWrap.getBoundingClientRect();
+      dragOffX = e.clientX - rect.left;
+      dragOffY = e.clientY - rect.top;
+      if (skin && skin.drag_start) {
+        petImg.src = skin.drag_start;
+        dragPhase = 'start';
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      dragTotalDist += Math.abs(e.movementX) + Math.abs(e.movementY);
+      if (e.movementX !== 0) {
+        const sign = e.movementX > 0 ? 1 : -1;
+        if (lastMoveX !== 0 && sign !== lastMoveX) dirChanges++;
+        lastMoveX = sign;
+      }
+      const drift = Math.sqrt((e.clientX - dragStartX) ** 2 + (e.clientY - dragStartY) ** 2);
+      if (drift > maxDrift) maxDrift = drift;
+      if (drift > 30) {
+        if (skin && skin.drag_mid && dragPhase !== 'mid') {
+          petImg.src = skin.drag_mid;
+          dragPhase = 'mid';
+        }
+        // flip based on current movement direction
+        if (e.movementX > 2) petImg.style.transform = 'scaleX(-1)';
+        else if (e.movementX < -2) petImg.style.transform = 'scaleX(1)';
+        const x = e.clientX - dragOffX;
+        const y = e.clientY - dragOffY;
+        petWrap.style.left = x + 'px';
+        petWrap.style.top = y + 'px';
+        petWrap.style.right = 'auto';
+        petWrap.style.bottom = 'auto';
+      }
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (!dragging) return;
+      const holdTime = Date.now() - dragStartTime;
+      const zone = getTouchZone(e.clientX, e.clientY, petImg.getBoundingClientRect());
+      // long hold + back-and-forth + stayed close = 摸
+      if (holdTime > 500 && dirChanges >= 3 && maxDrift < 50) {
+        if (window.electronAPI) {
+          window.electronAPI.relaySend({ type: 'pet', zone: zone, duration: holdTime, dirChanges: dirChanges });
+        }
+        petImg.style.transform = 'scale(1.05)';
+        setTimeout(() => petImg.style.transform = '', 300);
+      }
+      // drag end animation
+      if (skin && dragPhase && maxDrift > 30) {
+        petImg.src = skin.drag_end;
+        setTimeout(() => { petImg.src = getIdleSrc(); petImg.style.transform = ''; }, 800);
+      } else if (dragPhase) {
+        petImg.src = getIdleSrc();
+        petImg.style.transform = '';
+      }
+      dragPhase = null;
+      dragging = false;
+      // 拖动结束后恢复穿透（鼠标可能已在petWrap外）
+      const petRect = petWrap.getBoundingClientRect();
+      const mouseInPet = e.clientX >= petRect.left && e.clientX <= petRect.right && e.clientY >= petRect.top && e.clientY <= petRect.bottom;
+      if (!mouseInPet && window.electronAPI) window.electronAPI.setInteractive(false);
+      // 禁区检测：拖到禁区自动跑回最近的允许区
+      if (maxDrift > 30) {
+        setTimeout(() => enforceZoneBounds(), 900);
+      }
+    });
+
+    function enforceZoneBounds() {
+      const W = window.innerWidth, H = window.innerHeight;
+      const zones = getAllowedZones();
+      const rects = [];
+      if (zones.top)     rects.push({ x1: W*0.2, y1: 0, x2: W*0.8, y2: H*0.18 });
+      if (zones.left)    rects.push({ x1: 0, y1: H*0.26, x2: W*0.18, y2: H*0.74 });
+      if (zones.right)   rects.push({ x1: W*0.82, y1: H*0.26, x2: W, y2: H*0.74 });
+      if (zones.center)  rects.push({ x1: W*0.3, y1: H*0.32, x2: W*0.7, y2: H*0.68 });
+      if (zones.bottomL) rects.push({ x1: 0, y1: H*0.78, x2: W*0.42, y2: H });
+      if (zones.bottomR) rects.push({ x1: W*0.58, y1: H*0.78, x2: W, y2: H });
+      if (rects.length === 0) return;
+      const rect = petWrap.getBoundingClientRect();
+      const px = rect.left + 75, py = rect.top + 75;
+      const inAllowed = rects.some(r => px >= r.x1 && px <= r.x2 && py >= r.y1 && py <= r.y2);
+      if (!inAllowed) {
+        let best = null, bestDist = Infinity;
+        for (const r of rects) {
+          const cx = (r.x1 + r.x2) / 2 - 75, cy = (r.y1 + r.y2) / 2 - 75;
+          const d = Math.sqrt((px - cx) ** 2 + (py - cy) ** 2);
+          if (d < bestDist) { bestDist = d; best = { x: cx, y: cy }; }
+        }
+        if (best) startWalk(best.x, best.y);
+      }
+    }
+
+    // === Touch zone detection ===
+    const DEFAULT_PARTS = [
+      { id: "head", x: 50, y: 20 }, { id: "cheek-l", x: 28, y: 38 },
+      { id: "cheek-r", x: 72, y: 38 }, { id: "belly", x: 50, y: 55 },
+      { id: "arm-l", x: 12, y: 55 }, { id: "arm-r", x: 88, y: 55 },
+      { id: "leg-l", x: 38, y: 85 }, { id: "leg-r", x: 62, y: 85 },
+    ];
+
+    function getTouchZone(clickX, clickY, imgRect) {
+      const px = ((clickX - imgRect.left) / imgRect.width) * 100;
+      const py = ((clickY - imgRect.top) / imgRect.height) * 100;
+      let config = null;
+      try { config = JSON.parse(localStorage.getItem('pety-touch-config')); } catch(e) {}
+      const positions = config?.hotspotPos || {};
+      const disabled = config?.disabled || [];
+      let best = null, bestDist = Infinity;
+      for (const p of DEFAULT_PARTS) {
+        if (disabled.includes(p.id)) continue;
+        const pos = positions[p.id] || { x: p.x, y: p.y };
+        const d = Math.sqrt((px - pos.x) ** 2 + (py - pos.y) ** 2);
+        if (d < bestDist) { bestDist = d; best = p.id; }
+      }
+      return bestDist < 30 ? best : null;
+    }
+
+    // === Click = poke ===
+    petImg.addEventListener('click', (e) => {
+      if (dragTotalDist > 8) return;
+      pokeCount++;
+      const zone = getTouchZone(e.clientX, e.clientY, petImg.getBoundingClientRect());
+      if (window.electronAPI) window.electronAPI.relaySend({ type: 'poke', count: pokeCount, zone: zone });
+      petImg.style.transform = 'scale(0.85)';
+      setTimeout(() => petImg.style.transform = '', 150);
+    });
+
+    // === Bubble ===
+    function showBubble(text, dur, image) {
+      bubble.innerHTML = '';
+      if (image) {
+        const img = document.createElement('img');
+        img.src = image;
+        img.style.cssText = 'max-width:180px;max-height:120px;border-radius:6px;margin-bottom:4px;display:block;';
+        bubble.appendChild(img);
+      }
+      if (text) {
+        const div = document.createElement('div');
+        if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+          let html = marked.parse(text, { breaks: true, gfm: true });
+          html = html.replace(/^<p>(.*)<\/p>\s*$/s, '$1');
+          div.innerHTML = html;
+        } else {
+          div.textContent = text;
+        }
+        bubble.appendChild(div);
+      }
+      bubble.classList.add('show');
+      clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => bubble.classList.remove('show'), dur || (image ? 8000 : 5000));
+    }
+
+    const EMOTION_TO_SKIN = {
+      angry: 'hands_on_hips', happy: 'proud', shy: 'shy', shocked: 'shocked',
+      attention: 'attention', fall: 'fall',
+    };
+    function setEmotion(em) {
+      if (skin) {
+        const key = EMOTION_TO_SKIN[em];
+        if (key && skin[key]) {
+          petImg.src = skin[key] + '?t=' + Date.now();
+          getGifDuration(skin[key]).then(dur => {
+            setTimeout(() => { petImg.src = getIdleSrc(); }, dur || 3000);
+          });
+          return;
+        }
+        if (em === 'idle') { petImg.src = skin.idle; return; }
+        petImg.src = skin.idle;
+        return;
+      }
+      petImg.src = EMOTIONS[em] || EMOTIONS.idle;
+      if (em !== 'idle') setTimeout(() => { petImg.src = getIdleSrc(); }, 5000);
+    }
+
+    // === Chat toggle ===
+    chatBtn.addEventListener('click', () => {
+      chatOpen = !chatOpen;
+      inputWrap.classList.toggle('show', chatOpen);
+      if (chatOpen) { chatInput.focus(); voiceMode = false; voiceIndicator.classList.remove('show'); voiceBtn.classList.remove('active'); }
+      chatBtn.classList.toggle('active', chatOpen);
+    });
+
+    function sendChat() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      if (window.electronAPI) window.electronAPI.relaySend({ type: 'chat', text });
+      chatInput.value = '';
+      showBubble('思考中...');
+    }
+    inputSend.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+    });
+
+    // === Global Voice Mode ===
+    const VOICE_SERVER = 'http://localhost:9800';
+    const SILENCE_THRESHOLD = 0.015;
+    const SILENCE_TIMEOUT = 30;
+    const VOICE_START_COUNT = 3;
+    let micStream = null, analyser = null, vadInterval = null, audioCtx = null;
+    let mediaRecorder = null, audioChunks = [];
+    let isRecording = false, silenceCount = 0, voiceCount = 0;
+
+    function startGlobalMic() {
+      // NOTE: Do NOT call electronAPI.startVoiceServer() here.
+      // The voice toggle handler sends relaySend({type:'voice-mode', active:true})
+      // which triggers setVoiceMode(true) in main.js, which starts the server.
+      // Calling startVoiceServer here causes a duplicate IPC that re-broadcasts
+      // voice-mode to both windows, creating a feedback loop.
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        micStream = stream;
+        // Close any leaked AudioContext from a previous session
+        if (audioCtx) { try { audioCtx.close(); } catch(_) {} }
+        audioCtx = new AudioContext();
+        const source = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        voiceIndicator.textContent = '说话就会自动录音';
+
+        vadInterval = setInterval(() => {
+          const data = new Float32Array(analyser.fftSize);
+          analyser.getFloatTimeDomainData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+          const rms = Math.sqrt(sum / data.length);
+
+          if (!isRecording) {
+            if (rms > SILENCE_THRESHOLD) {
+              voiceCount++;
+              if (voiceCount >= VOICE_START_COUNT) {
+                isRecording = true;
+                silenceCount = 0;
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = () => sendVoiceAudio();
+                mediaRecorder.start();
+                voiceIndicator.textContent = '聆听中...';
+                showBubble('聆听中...');
+              }
+            } else {
+              voiceCount = 0;
+            }
+          } else {
+            if (rms < SILENCE_THRESHOLD) {
+              silenceCount++;
+              if (silenceCount >= SILENCE_TIMEOUT) {
+                if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+                isRecording = false;
+                voiceCount = 0;
+              }
+            } else {
+              silenceCount = 0;
+            }
+          }
+        }, 100);
+      }).catch(() => {
+        voiceIndicator.textContent = '麦克风权限被拒绝';
+      });
+    }
+
+    function stopGlobalMic() {
+      if (vadInterval) { clearInterval(vadInterval); vadInterval = null; }
+      if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+      if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+      // Close AudioContext to prevent accumulation
+      if (audioCtx) { try { audioCtx.close(); } catch(_) {} audioCtx = null; }
+      analyser = null;
+      isRecording = false;
+      // NOTE: Do NOT call electronAPI.stopVoiceServer() here.
+      // The voice toggle handler sends relaySend({type:'voice-mode', active:false})
+      // which triggers setVoiceMode(false) in main.js, which stops the server.
+    }
+
+    async function sendVoiceAudio() {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      if (blob.size < 500) { voiceIndicator.textContent = '说话就会自动录音'; return; }
+      voiceIndicator.textContent = '识别中...';
+      showBubble('识别中...');
+      try {
+        const resp = await fetch(`${VOICE_SERVER}/stt`, { method: 'POST', body: blob, headers: { 'Content-Type': 'audio/webm' } });
+        const result = await resp.json();
+        if (result.text) {
+          voiceIndicator.textContent = result.text;
+          if (window.electronAPI) window.electronAPI.relaySend({ type: 'chat', text: '[语音] ' + result.text });
+          showBubble('思考中...');
+        } else {
+          voiceIndicator.textContent = '没听清';
+          setTimeout(() => { if (voiceMode) voiceIndicator.textContent = '说话就会自动录音'; }, 2000);
+        }
+      } catch (e) {
+        voiceIndicator.textContent = '语音服务连接失败';
+      }
+    }
+
+    voiceBtn.addEventListener('click', () => {
+      voiceMode = !voiceMode;
+      localStorage.setItem('pety-voice-global', voiceMode ? 'on' : 'off');
+      voiceBtn.classList.toggle('active', voiceMode);
+      voiceIndicator.classList.toggle('show', voiceMode);
+      if (voiceMode) {
+        chatOpen = false; inputWrap.classList.remove('show'); chatBtn.classList.remove('active');
+        showBubble('语音模式开启');
+        voiceIndicator.textContent = '语音由面板处理';
+      } else {
+        showBubble('语音模式关闭');
+        stopGlobalMic();
+      }
+      // 通知main.js统一管理语音状态，录音由面板负责
+      if (window.electronAPI) window.electronAPI.relaySend({ type: 'voice-mode', active: voiceMode });
+    });
+
+    // === GIF duration detection ===
+    async function getGifDuration(src) {
+      try {
+        const cleanSrc = src.split('?')[0];
+        const resp = await fetch(cleanSrc);
+        const buf = await resp.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let totalDelay = 0, i = 0;
+        while (i < bytes.length - 1) {
+          if (bytes[i] === 0x21 && bytes[i+1] === 0xF9 && i+4 < bytes.length) {
+            const delay = (bytes[i+4] | (bytes[i+5] << 8)) * 10;
+            totalDelay += Math.min(delay || 100, 500);
+            i += 6;
+          } else { i++; }
+        }
+        return totalDelay > 0 ? totalDelay + 200 : 2000;
+      } catch(e) { return 2000; }
+    }
+
+    // === State change handler ===
+    let currentState = 'idle';
+    let stateTimer = null;
+
+    function handleStateChange(state) {
+      currentState = state;
+      petImg.classList.remove('walking', 'thinking');
+      if (stateTimer) { clearTimeout(stateTimer); stateTimer = null; }
+
+      if (state === 'thinking') {
+        petImg.classList.add('thinking');
+        return;
+      }
+
+      if (state === 'coding' || state === 'reading') {
+        if (skin) {
+          const src = skin[state] || skin.idle;
+          petImg.src = src;
+        }
+        return;
+      }
+
+      // one-shot states: play GIF then return to idle
+      if (['spy', 'screenshot', 'open_app', 'close_app', 'browsing', 'hands_on_hips', 'proud', 'shy', 'shocked', 'attention', 'fall'].includes(state)) {
+        if (skin && skin[state]) {
+          const gifSrc = skin[state];
+          petImg.src = gifSrc;
+          getGifDuration(gifSrc).then(dur => {
+            stateTimer = setTimeout(() => { petImg.src = getIdleSrc(); currentState = 'idle'; }, dur || 2000);
+          });
+        }
+        return;
+      }
+
+      if (state === 'idle') {
+        petImg.src = getIdleSrc();
+      }
+    }
+
+    // === Autonomous movement ===
+    let autoWalk = false, walkTarget = null, walkSpeed = 1.5;
+
+    let walkPhase = null; // null, 'start', 'mid', 'end'
+
+    function startWalk(targetX, targetY) {
+      walkTarget = { x: targetX, y: targetY };
+      autoWalk = true;
+      if (skin && skin.walk_start) {
+        petImg.classList.remove('walking');
+        petImg.src = skin.walk_start;
+        walkPhase = 'start';
+        setTimeout(() => {
+          if (autoWalk && skin && skin.walk_mid) {
+            petImg.src = skin.walk_mid;
+            petImg.classList.add('walking');
+            walkPhase = 'mid';
+          }
+        }, 600);
+      }
+    }
+
+    function stopWalk() {
+      autoWalk = false;
+      walkTarget = null;
+      petImg.classList.remove('walking');
+      if (skin && skin.walk_end && walkPhase) {
+        petImg.src = skin.walk_end;
+        walkPhase = 'end';
+        setTimeout(() => { petImg.src = getIdleSrc(); petImg.style.transform = ''; walkPhase = null; }, 800);
+      } else {
+        walkPhase = null;
+      }
+    }
+
+    function getAllowedZones() {
+      try { const s = localStorage.getItem('pety-area-config'); if (s) return JSON.parse(s); } catch(e) {}
+      return { left: true, right: true, top: false, bottomL: true, bottomR: true, center: false };
+    }
+
+    function randomWalk() {
+      const W = window.innerWidth, H = window.innerHeight;
+      if (physicsMode) {
+        const groundY = H - GROUND_Y_OFFSET - 150;
+        const tx = Math.random() * (W - 180);
+        startWalk(Math.max(0, tx), groundY);
+        return;
+      }
+      const zones = getAllowedZones();
+      const rects = [];
+      if (zones.top)     rects.push({ x1: W*0.2, y1: 0, x2: W*0.8, y2: H*0.18 });
+      if (zones.left)    rects.push({ x1: 0, y1: H*0.26, x2: W*0.18, y2: H*0.74 });
+      if (zones.right)   rects.push({ x1: W*0.82, y1: H*0.26, x2: W, y2: H*0.74 });
+      if (zones.center)  rects.push({ x1: W*0.3, y1: H*0.32, x2: W*0.7, y2: H*0.68 });
+      if (zones.bottomL) rects.push({ x1: 0, y1: H*0.78, x2: W*0.42, y2: H });
+      if (zones.bottomR) rects.push({ x1: W*0.58, y1: H*0.78, x2: W, y2: H });
+      if (rects.length === 0) return;
+      const r = rects[Math.floor(Math.random() * rects.length)];
+      const tx = r.x1 + Math.random() * (r.x2 - r.x1 - 150);
+      const ty = r.y1 + Math.random() * (r.y2 - r.y1 - 150);
+      startWalk(Math.max(0, tx), Math.max(0, ty));
+    }
+
+    function walkTick() {
+      if (!autoWalk || !walkTarget) { requestAnimationFrame(walkTick); return; }
+      const rect = petWrap.getBoundingClientRect();
+      const cx = rect.left, cy = rect.top;
+      let dx = walkTarget.x - cx, dy = walkTarget.y - cy;
+      if (physicsMode) dy = 0;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 3) {
+        stopWalk();
+      } else {
+        const mx = (dx / dist) * walkSpeed;
+        const my = physicsMode ? 0 : (dy / dist) * walkSpeed;
+        petWrap.style.left = (cx + mx) + 'px';
+        if (!physicsMode) { petWrap.style.top = (cy + my) + 'px'; }
+        petWrap.style.right = 'auto';
+        petWrap.style.bottom = 'auto';
+        if (!petImg.classList.contains('walking')) {
+          if (dx < -2) petImg.style.transform = 'scaleX(-1)';
+          else if (dx > 2) petImg.style.transform = 'scaleX(1)';
+        }
+      }
+      requestAnimationFrame(walkTick);
+    }
+    requestAnimationFrame(walkTick);
+
+    // === Auto-walk (自动溜达) ===
+    let autoWalkEnabled = localStorage.getItem('pety-auto-walk') !== 'off';
+    let autoWalkTimer = null;
+
+    function scheduleAutoWalk() {
+      if (autoWalkTimer) clearTimeout(autoWalkTimer);
+      if (!autoWalkEnabled) return;
+      const delay = 20000 + Math.random() * 40000; // 20~60秒随机
+      autoWalkTimer = setTimeout(() => {
+        if (autoWalkEnabled && !dragging && !autoWalk) {
+          randomWalk();
+        }
+        scheduleAutoWalk();
+      }, delay);
+    }
+    scheduleAutoWalk();
+
+    // === Physics mode (物理模式) ===
+    let physicsMode = localStorage.getItem('pety-physics') === 'on';
+    let velocityX = 0, velocityY = 0;
+    let onGround = false;
+    const GRAVITY = 0.5;
+    const GROUND_Y_OFFSET = Math.max(80, window.outerHeight - window.screen.availHeight + 60);
+    const BOUNCE = 0.3;
+    const FRICTION = 0.75;
+    let lastDragX = 0, lastDragY = 0, dragVelX = 0, dragVelY = 0;
+    let physicsDragging = false; // 独立于原始拖拽系统的标记，防止按钮点击误触发甩飞
+
+    function physicsTick() {
+      if (!physicsMode || dragging || autoWalk) { requestAnimationFrame(physicsTick); return; }
+      const rect = petWrap.getBoundingClientRect();
+      const groundY = window.innerHeight - GROUND_Y_OFFSET - 150;
+      const W = window.innerWidth;
+
+      velocityY += GRAVITY;
+      let newX = rect.left + velocityX;
+      let newY = rect.top + velocityY;
+
+      // 边界碰撞
+      if (newX < 0) { newX = 0; velocityX = -velocityX * BOUNCE; }
+      if (newX > W - 150) { newX = W - 150; velocityX = -velocityX * BOUNCE; }
+      if (newY < 0) { newY = 0; velocityY = -velocityY * BOUNCE; }
+
+      // 地面碰撞
+      if (newY >= groundY) {
+        newY = groundY;
+        if (velocityY > 3) {
+          velocityY = -velocityY * BOUNCE;
+          if (skin && skin.fall) {
+            petImg.src = skin.fall + '?t=' + Date.now();
+            setTimeout(() => { petImg.src = getIdleSrc(); }, 800);
+          }
+        } else {
+          velocityY = 0;
+          onGround = true;
+        }
+        velocityX *= FRICTION;
+        if (Math.abs(velocityX) < 0.5) velocityX = 0;
+      } else {
+        onGround = false;
+        velocityX *= 0.98;
+        if (velocityY > 2 && skin && skin.fall && !petImg.src.includes('fall')) {
+          petImg.src = skin.fall + '?t=' + Date.now();
+        }
+      }
+
+      // 水平翻转
+      if (velocityX > 1) petImg.style.transform = 'scaleX(-1)';
+      else if (velocityX < -1) petImg.style.transform = 'scaleX(1)';
+
+      // Clamp to visible area — never go below screen
+      // 用固定安全底边距，避免气泡隐藏时offsetHeight不准导致掉到任务栏后面
+      const safeMaxY = window.innerHeight - 250; // 150小狗 + 60底部栏 + 40余量
+      const maxY = Math.min(groundY, safeMaxY);
+      if (newY > maxY) { newY = maxY; velocityY = 0; onGround = true; }
+      petWrap.style.left = newX + 'px';
+      petWrap.style.top = newY + 'px';
+      petWrap.style.right = 'auto';
+      petWrap.style.bottom = 'auto';
+
+      requestAnimationFrame(physicsTick);
+    }
+    requestAnimationFrame(physicsTick);
+
+    // 记录拖动速度（滑动窗口取最近5帧平均）
+    const velHistory = [];
+    document.addEventListener('mousemove', (e) => {
+      if (dragging && physicsMode) {
+        const dx = e.clientX - lastDragX;
+        const dy = e.clientY - lastDragY;
+        velHistory.push({ dx, dy });
+        if (velHistory.length > 5) velHistory.shift();
+        dragVelX = dx;
+        dragVelY = dy;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
+      }
+    });
+    petImg.addEventListener('mousedown', (e) => {
+      velocityX = 0; velocityY = 0; onGround = false;
+      physicsDragging = true;
+      lastDragX = e.clientX; lastDragY = e.clientY;
+      dragVelX = 0; dragVelY = 0;
+      velHistory.length = 0;
+    });
+    document.addEventListener('mouseup', () => {
+      if (physicsMode && physicsDragging && maxDrift > 30) {
+        let avgX = 0, avgY = 0;
+        if (velHistory.length > 0) {
+          for (const v of velHistory) { avgX += v.dx; avgY += v.dy; }
+          avgX /= velHistory.length;
+          avgY /= velHistory.length;
+        }
+        velocityX = avgX * 0.8;
+        velocityY = avgY * 0.8;
+        const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+        if (speed > 3 && window.electronAPI) {
+          window.electronAPI.relaySend({ type: 'fling', text: `${userName}把小狗甩飞了！速度${Math.round(speed)}`, speed: Math.round(speed) });
+        }
+      }
+      physicsDragging = false;
+    });
+
+    // === Mouse tracking (for Live2D eye params later) ===
+    let mouseAngle = 0, mouseDist = 0;
+    document.addEventListener('mousemove', (e) => {
+      const rect = petImg.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height * 0.35;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      mouseDist = Math.min(Math.sqrt(dx * dx + dy * dy) / 300, 1);
+      mouseAngle = Math.atan2(dy, dx);
+    });
+
+    // === TTS Playback ===
+    let ttsAudio = null;
+    function uint8ToBase64(bytes) {
+      let s = '';
+      for (let i = 0; i < bytes.length; i += 8192) {
+        s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      }
+      return btoa(s);
+    }
+
+    async function speakTTS(text) {
+      try {
+        const resp = await fetch('http://localhost:9800/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        if (!resp.ok) return;
+        const blob = await resp.blob();
+        const buf = await blob.arrayBuffer();
+        const b64 = uint8ToBase64(new Uint8Array(buf));
+        if (window.electronAPI && window.electronAPI.cacheTtsAudio) {
+          window.electronAPI.cacheTtsAudio(text, b64);
+        }
+        const url = URL.createObjectURL(new Blob([buf], { type: 'audio/mp3' }));
+        if (ttsAudio) { ttsAudio.pause(); URL.revokeObjectURL(ttsAudio.src); }
+        ttsAudio = new Audio(url);
+        ttsAudio.play();
+        ttsAudio.onended = () => { URL.revokeObjectURL(url); ttsAudio = null; };
+      } catch (e) {}
+    }
+
+    // === IPC Relay ===
+    if (window.electronAPI && window.electronAPI.onRelayMessage) {
+      window.electronAPI.onRelayMessage((data) => {
+        if (data.type === 'status' || data.online !== undefined) {
+          isOnline = data.online;
+          statusEl.textContent = isOnline ? '在线' : '离线';
+          statusEl.className = isOnline ? 'online' : 'server-only';
+          return;
+        }
+        if (data.type === 'state-change') {
+          handleStateChange(data.state);
+          return;
+        }
+        if (data.type === 'walk') {
+          if (data.x !== undefined && data.y !== undefined) startWalk(data.x, data.y);
+          else randomWalk();
+          return;
+        }
+        if (data.type === 'stop-walk') { stopWalk(); return; }
+        if (data.type === 'skin-change') {
+          currentSkin = data.skin || 'default';
+          localStorage.setItem('pety-skin', currentSkin);
+          skin = SKINS[currentSkin] || null;
+          petImg.src = skin ? skin.idle : EMOTIONS.idle;
+          return;
+        }
+        if (data.type === 'auto-walk-toggle') {
+          autoWalkEnabled = !!data.enabled;
+          localStorage.setItem('pety-auto-walk', autoWalkEnabled ? 'on' : 'off');
+          if (autoWalkEnabled) scheduleAutoWalk();
+          else { if (autoWalkTimer) clearTimeout(autoWalkTimer); stopWalk(); }
+          return;
+        }
+        if (data.type === 'physics-toggle') {
+          physicsMode = !!data.enabled;
+          localStorage.setItem('pety-physics', physicsMode ? 'on' : 'off');
+          if (!physicsMode) { velocityY = 0; onGround = false; }
+          return;
+        }
+        if (data.type === 'voice-mode') {
+          voiceMode = !!data.active;
+          localStorage.setItem('pety-voice-global', voiceMode ? 'on' : 'off');
+          voiceBtn.classList.toggle('active', voiceMode);
+          voiceIndicator.classList.toggle('show', voiceMode);
+          if (voiceMode) {
+            voiceIndicator.textContent = '语音由面板处理';
+          } else {
+            stopGlobalMic();
+          }
+          return;
+        }
+        if (data.type === 'user-chat') return;
+        const imgSrc = data.image || (data.file && data.file.isImage ? data.file.dataUrl : null);
+        if (data.text || imgSrc) showBubble(data.text, null, imgSrc);
+        if (data.emotion) setEmotion(data.emotion);
+        // TTS now handled by main.js autoTtsForMessage
+      });
+      statusEl.textContent = '已连接'; statusEl.className = 'server-only';
+      if (window.electronAPI.getRelayStatus) {
+        window.electronAPI.getRelayStatus().then((s) => {
+          if (s && s.online !== undefined) {
+            isOnline = s.online;
+            statusEl.textContent = isOnline ? '在线' : '离线';
+            statusEl.className = isOnline ? 'online' : 'server-only';
+          }
+        });
+      }
+    }
+
+  </script>
+</body>
+</html>

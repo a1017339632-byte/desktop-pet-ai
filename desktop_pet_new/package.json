@@ -1,0 +1,90 @@
+{
+  "name": "pety",
+  "version": "0.4.0",
+  "description": "Pety Desktop Pet Console",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable"
+  },
+  "author": "ChenYu",
+  "dependencies": {
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.chenyu.pety",
+    "productName": "Pety",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "asar": false,
+    "files": [
+      "main.js",
+      "preload.js",
+      "App.html",
+      "pet-float.html",
+      "call-window.html",
+      "call-preload.js",
+      "styles.css",
+      "pet.css",
+      "voice.css",
+      "extras.css",
+      "tweaks-panel.jsx",
+      "ws-bridge.jsx",
+      "Pet.jsx",
+      "VoiceVisuals.jsx",
+      "Sidebar.jsx",
+      "HomePage.jsx",
+      "MonitorPage.jsx",
+      "ChatPage.jsx",
+      "AreaPage.jsx",
+      "TouchPage.jsx",
+      "FormSwitchPage.jsx",
+      "VoiceCallOverlay.jsx",
+      "DiaryPage.jsx",
+      "MemoryPage.jsx",
+      "SettingsPage.jsx",
+      "Landing.html",
+      "uploads/**/*",
+      "assets/**/*",
+      "scripts/**/*",
+      "voice_server.py"
+    ],
+    "extraResources": [
+      {
+        "from": "optional/plugin/",
+        "to": "plugin",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "optional/relay/",
+        "to": "relay",
+        "filter": ["**/*"]
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
+      "language": 2052,
+      "include": "installer.nsh",
+      "shortcutName": "Pety"
+    },
+    "portable": {
+      "artifactName": "Pety.exe"
+    }
+  }
+}

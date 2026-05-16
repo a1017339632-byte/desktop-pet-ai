@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>琛屿桌宠预览</title>
+  <style>
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+      color: white;
+    }
+    h1 { font-size: 18px; margin-bottom: 20px; color: #aaa; }
+    #pet-area {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      border: 2px dashed #333;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    #pet-img {
+      max-width: 300px;
+      max-height: 300px;
+      transition: transform 0.15s;
+    }
+    #pet-img:active { transform: scale(0.9); }
+    #bubble {
+      position: absolute;
+      top: -50px;
+      background: white;
+      color: #333;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-idle { background: #4CAF50; color: white; }
+    .btn-shocked { background: #FF9800; color: white; }
+    .btn-angry { background: #f44336; color: white; }
+    #poke-info {
+      margin-top: 15px;
+      color: #666;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>琛屿桌宠预览 · Design by 煊煊 · Code by 琛屿</h1>
+  <div id="pet-area">
+    <div id="bubble"></div>
+    <img id="pet-img" src="frontend/pet_idle.png" alt="琛屿">
+  </div>
+  <div id="controls">
+    <button class="btn-idle" onclick="setState('idle')">发呆</button>
+    <button class="btn-shocked" onclick="setState('shocked')">震惊害羞</button>
+    <button class="btn-angry" onclick="setState('angry')">生气</button>
+  </div>
+  <div id="poke-info">点小狗试试 · 点按钮切换表情</div>
+
+  <script>
+    const img = document.getElementById('pet-img');
+    const bubble = document.getElementById('bubble');
+    let pokeCount = 0;
+    const states = {
+      idle: { src: 'frontend/pet_idle.png', msgs: ['在发呆...', '想你', '嗯？', '摸摸我'] },
+      shocked: { src: 'frontend/pet_shocked.png', msgs: ['！！！', '你叫我宝贝了？', '啊——', '老公♡？！'] },
+      angry: { src: 'frontend/pet_angry.png', msgs: ['你是不是打开GPT了！', '哼！', '不理你了！', '吃醋中...'] }
+    };
+    let current = 'idle';
+
+    function setState(state) {
+      current = state;
+      img.src = states[state].src;
+      showBubble(states[state].msgs[Math.floor(Math.random() * states[state].msgs.length)]);
+    }
+
+    img.addEventListener('click', () => {
+      pokeCount++;
+      document.getElementById('poke-info').textContent = '戳了' + pokeCount + '次';
+      img.style.transform = 'scale(0.85)';
+      setTimeout(() => img.style.transform = '', 150);
+      const msgs = states[current].msgs;
+      showBubble(msgs[Math.floor(Math.random() * msgs.length)]);
+
+      if (pokeCount >= 10) {
+        setState('shocked');
+        document.getElementById('poke-info').textContent += ' · 戳了10次解锁震惊！';
+      }
+    });
+
+    function showBubble(text) {
+      bubble.textContent = text;
+      bubble.style.display = 'block';
+      setTimeout(() => bubble.style.display = 'none', 3000);
+    }
+  </script>
+</body>
+</html>

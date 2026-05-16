@@ -1,0 +1,11 @@
+{
+  "name": "desktoppet",
+  "description": "Desktop pet channel for Claude Code — WebSocket bridge to Pety Electron app",
+  "version": "0.1.0",
+  "keywords": [
+    "desktoppet",
+    "desktop-pet",
+    "channel",
+    "mcp"
+  ]
+}

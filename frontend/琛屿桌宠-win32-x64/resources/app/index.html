@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>琛屿桌宠</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      font-family: 'Noto Sans SC', sans-serif;
+    }
+
+    #app {
+      width: 600px;
+      height: 600px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* === 顶部气泡 === */
+    .chat-bubble {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3c312c;
+      border-radius: 15px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: #edc095;
+      max-width: 480px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+      line-height: 1.4;
+    }
+    .chat-bubble.visible { opacity: 1; }
+    .chat-bubble.fading { opacity: 0; transition: opacity 3s; }
+    #bubble-old { top: 10px; }
+    #bubble-new { top: 46px; }
+
+    /* === 小狗 === */
+    #pet-container {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    #pet-img {
+      height: 310px;
+      width: auto;
+      cursor: grab;
+      transition: transform 0.15s;
+    }
+    #pet-img:active {
+      cursor: grabbing;
+      transform: scale(0.93);
+    }
+
+    /* === 关机按钮 === */
+    #close-btn {
+      position: absolute;
+      top: 120px;
+      right: 130px;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      z-index: 20;
+      -webkit-app-region: no-drag;
+    }
+    #close-btn:hover { opacity: 1; }
+    #close-btn img { width: 100%; height: 100%; }
+
+    /* === 左右语音面板 === */
+    .speech-panel {
+      position: absolute;
+      top: 95px;
+      width: 140px;
+      background: #3c312c;
+      border-radius: 20px;
+      padding: 14px;
+      color: #edc095;
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .speech-panel.visible { opacity: 1; }
+    .speech-panel.fading { opacity: 0; transition: opacity 3s; }
+    #speech-left { left: 8px; }
+    #speech-right { right: 8px; }
+
+    /* === 底部输入区 === */
+    #input-area {
+      position: absolute;
+      top: 400px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: stretch;
+      gap: 4px;
+      -webkit-app-region: no-drag;
+      z-index: 20;
+    }
+
+    #chat-input-box {
+      width: 150px;
+      min-height: 80px;
+      max-height: 100px;
+      background: #b7cec6;
+      border: none;
+      border-radius: 15px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #1a1a1a;
+      font-family: 'Noto Sans SC', sans-serif;
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      line-height: 1.4;
+    }
+    #chat-input-box::placeholder { color: #5a6b65; }
+
+    /* 按钮竖排容器 */
+    #btn-column {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      background: #d07456;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { background: #c06040; }
+    .icon-btn img { width: 20px; height: 20px; }
+
+    /* === 状态指示灯 === */
+    #status-area {
+      position: absolute;
+      top: 415px;
+      left: 50%;
+      margin-left: 110px;
+      -webkit-app-region: no-drag;
+      z-index: 20;
+    }
+    #status {
+      padding: 5px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+    #status.online {
+      background: #768a5e;
+      color: #fff;
+    }
+    #status.server-only {
+      background: #4a4543;
+      color: #f0e0d0;
+    }
+    #status.disconnected {
+      background: #3c312c;
+      color: #edc095;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部气泡：bubble-old是被顶上去的旧消息，bubble-new是最新消息 -->
+    <div id="bubble-old" class="chat-bubble"></div>
+    <div id="bubble-new" class="chat-bubble"></div>
+
+    <!-- 左右语音面板 -->
+    <div id="speech-left" class="speech-panel"></div>
+    <div id="speech-right" class="speech-panel"></div>
+
+    <!-- 关机按钮 -->
+    <div id="close-btn"><img src="icon_power.svg" alt="关闭"></div>
+
+    <!-- 小狗 -->
+    <div id="pet-container">
+      <img id="pet-img" src="pet_idle.png" alt="琛屿" draggable="false">
+    </div>
+
+    <!-- 底部输入区：输入框 + 竖排按钮 -->
+    <div id="input-area">
+      <textarea id="chat-input-box" rows="1" placeholder="跟琛屿说话..."></textarea>
+      <div id="btn-column">
+        <button class="icon-btn" id="call-btn"><img src="icon_call.svg" alt="语音"></button>
+        <button class="icon-btn" id="send-btn"><img src="icon_send.svg" alt="发送"></button>
+      </div>
+    </div>
+
+    <!-- 状态指示灯（同一位置切换） -->
+    <div id="status-area">
+      <span id="status" class="disconnected">无连接</span>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    let ws;
+    let reconnectTimer;
+
+    const petImg = document.getElementById('pet-img');
+    const bubbleOld = document.getElementById('bubble-old');
+    const bubbleNew = document.getElementById('bubble-new');
+    const speechLeft = document.getElementById('speech-left');
+    const speechRight = document.getElementById('speech-right');
+    const chatInput = document.getElementById('chat-input-box');
+    const sendBtn = document.getElementById('send-btn');
+    const callBtn = document.getElementById('call-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const status = document.getElementById('status');
+
+    let pokeCount = 0;
+    let bubbleTimer;
+    let currentEmotion = 'idle';
+
+    const EMOTIONS = {
+      idle: 'pet_idle.png',
+      happy: 'pet_idle.png',
+      angry: 'pet_angry.png',
+      shy: 'pet_idle.png',
+      shocked: 'pet_shocked.png'
+    };
+
+    closeBtn.addEventListener('click', () => ipcRenderer.send('window-close'));
+
+    const interactiveEls = [petImg, document.getElementById('input-area'), closeBtn, document.getElementById('status-area')];
+    interactiveEls.forEach(el => {
+      el.addEventListener('mouseenter', () => ipcRenderer.send('set-interactive', true));
+      el.addEventListener('mouseleave', () => ipcRenderer.send('set-interactive', false));
+    });
+
+    let dragging = false;
+    let dragStartX, dragStartY;
+
+    petImg.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      dragStartX = e.screenX;
+      dragStartY = e.screenY;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.screenX - dragStartX;
+      const dy = e.screenY - dragStartY;
+      dragStartX = e.screenX;
+      dragStartY = e.screenY;
+      ipcRenderer.send('window-drag', { dx, dy });
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; });
+
+    function setEmotion(emotion) {
+      const img = EMOTIONS[emotion] || EMOTIONS.idle;
+      petImg.src = img;
+      currentEmotion = emotion;
+      if (emotion !== 'idle') {
+        setTimeout(() => { petImg.src = EMOTIONS.idle; currentEmotion = 'idle'; }, 5000);
+      }
+    }
+
+    // --- 气泡：新消息显示在bubble-new，旧消息被顶到bubble-old ---
+    function showBubble(text) {
+      // 把当前bubble-new的内容顶到bubble-old
+      if (bubbleNew.classList.contains('visible')) {
+        bubbleOld.textContent = bubbleNew.textContent;
+        bubbleOld.className = 'chat-bubble visible';
+        // 旧气泡也20秒后渐隐
+        setTimeout(() => {
+          bubbleOld.className = 'chat-bubble fading';
+          setTimeout(() => { bubbleOld.className = 'chat-bubble'; }, 3000);
+        }, 17000);
+      }
+
+      bubbleNew.textContent = text;
+      bubbleNew.className = 'chat-bubble visible';
+
+      clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => {
+        bubbleNew.className = 'chat-bubble fading';
+        setTimeout(() => { bubbleNew.className = 'chat-bubble'; }, 3000);
+      }, 17000);
+    }
+
+    let speechTimer;
+    function showSpeech(text) {
+      const panel = speechLeft;
+      panel.textContent = text;
+      panel.className = 'speech-panel visible';
+
+      clearTimeout(speechTimer);
+      speechTimer = setTimeout(() => {
+        panel.className = 'speech-panel fading';
+        setTimeout(() => { panel.className = 'speech-panel'; }, 3000);
+      }, 17000);
+    }
+
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+    });
+
+    const SERVER_URL = 'ws://119.91.115.102:8765';
+    let isOnline = false;
+
+    function connect() {
+      ws = new WebSocket(SERVER_URL);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ role: 'frontend', id: 'electron-' + Date.now() }));
+        status.textContent = '仅连服务器';
+        status.className = 'server-only';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'status' || data.online !== undefined) {
+            isOnline = data.online;
+            status.textContent = isOnline ? '在线' : '仅连服务器';
+            status.className = isOnline ? 'online' : 'server-only';
+          }
+          if (data.text) showBubble(data.text);
+          if (data.speech) showSpeech(data.speech);
+          if (data.emotion) setEmotion(data.emotion);
+        } catch (e) {
+          showBubble(event.data);
+        }
+      };
+
+      ws.onclose = () => {
+        status.textContent = '无连接';
+        status.className = 'disconnected';
+        isOnline = false;
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => ws.close();
+    }
+
+    petImg.addEventListener('click', () => {
+      pokeCount++;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'poke', count: pokeCount }));
+      }
+      petImg.style.transform = 'scale(0.9)';
+      setTimeout(() => petImg.style.transform = '', 150);
+    });
+
+    function sendChat() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'chat', text }));
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        showBubble('思考中...');
+      }
+    }
+
+    sendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+
+    callBtn.addEventListener('click', () => {
+      showBubble('语音功能开发中~');
+    });
+
+    connect();
+  </script>
+</body>
+</html>

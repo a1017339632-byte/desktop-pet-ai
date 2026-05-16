@@ -1,0 +1,36 @@
+{
+  "name": "claude-pet",
+  "version": "0.1.0",
+  "description": "Claude桌宠 - Design by 煊煊 · Code by 琛屿",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "author": "琛屿 & 煊煊",
+  "dependencies": {
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.chenyu.pet",
+    "productName": "琛屿桌宠",
+    "win": {
+      "target": "portable",
+      "icon": "pet_idle.png"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "pet_idle.png",
+      "pet_angry.png",
+      "pet_shocked.png"
+    ],
+    "portable": {
+      "artifactName": "琛屿桌宠.exe"
+    }
+  }
+}

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Incoming Call</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      font-family: 'Noto Sans SC', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #call-card {
+      background: rgba(60, 40, 30, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(213, 114, 71, 0.5);
+      border-radius: 16px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 160px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 12px rgba(213,114,71,0.2);
+      animation: call-slide-in 0.3s ease-out;
+    }
+
+    @keyframes call-slide-in {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes call-ring {
+      0%, 100% { transform: rotate(0deg); }
+      15% { transform: rotate(15deg); }
+      30% { transform: rotate(-15deg); }
+      45% { transform: rotate(10deg); }
+      60% { transform: rotate(-10deg); }
+      75% { transform: rotate(5deg); }
+    }
+
+    #call-icon {
+      font-size: 28px;
+      animation: call-ring 1.2s ease-in-out infinite;
+    }
+
+    #call-caller {
+      font-size: 13px;
+      color: #f0e0d0;
+      font-weight: 500;
+    }
+
+    #call-countdown {
+      font-size: 11px;
+      color: rgba(240, 224, 208, 0.5);
+    }
+
+    #call-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .call-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .call-btn:hover { transform: scale(1.1); }
+    .call-btn:active { transform: scale(0.95); }
+
+    .call-btn.accept {
+      background: rgba(102, 178, 102, 0.9);
+      box-shadow: 0 2px 8px rgba(102, 178, 102, 0.4);
+    }
+    .call-btn.decline {
+      background: rgba(229, 64, 64, 0.9);
+      box-shadow: 0 2px 8px rgba(229, 64, 64, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="call-card">
+    <div id="call-icon">📞</div>
+    <div id="call-caller">来电中...</div>
+    <div id="call-countdown">30</div>
+    <div id="call-actions">
+      <button id="call-accept" class="call-btn accept" title="接听">📞</button>
+      <button id="call-decline" class="call-btn decline" title="拒绝">📵</button>
+    </div>
+  </div>
+
+  <script>
+    const callerEl = document.getElementById('call-caller');
+    const countdownEl = document.getElementById('call-countdown');
+    const acceptBtn = document.getElementById('call-accept');
+    const declineBtn = document.getElementById('call-decline');
+
+    let countdownValue = 30;
+    let countdownTimer = null;
+    let ringtone = null;
+
+    // Get call info from main process
+    window.electronAPI.getCallInfo().then((info) => {
+      if (info && info.caller) {
+        callerEl.textContent = info.caller;
+      }
+    });
+
+    // Start countdown
+    countdownTimer = setInterval(() => {
+      countdownValue--;
+      countdownEl.textContent = countdownValue;
+      if (countdownValue <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+    }, 1000);
+
+    // Play ringtone
+    try {
+      ringtone = new Audio('assets/ringtone.mp3');
+      ringtone.loop = true;
+      ringtone.play().catch(() => {});
+    } catch (e) {}
+
+    // Button handlers
+    acceptBtn.addEventListener('click', () => {
+      stopRingtone();
+      window.electronAPI.callResponse('accepted');
+    });
+
+    declineBtn.addEventListener('click', () => {
+      stopRingtone();
+      window.electronAPI.callResponse('declined');
+    });
+
+    function stopRingtone() {
+      if (ringtone) {
+        ringtone.pause();
+        ringtone.currentTime = 0;
+        ringtone = null;
+      }
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+    }
+  </script>
+</body>
+</html>

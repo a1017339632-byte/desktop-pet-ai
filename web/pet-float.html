@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Pety</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; overflow: hidden; user-select: none; font-family: 'Noto Sans SC', sans-serif; width: 100vw; height: 100vh; }
+
+    #pet-wrap {
+      position: absolute;
+      width: 180px;
+      bottom: 60px;
+      right: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .bubble {
+      background: rgba(213,114,71,0.92); border-radius: 12px;
+      padding: 8px 12px; font-size: 12px; color: #fff;
+      max-width: 220px; word-wrap: break-word; white-space: normal; line-height: 1.4;
+      margin-bottom: 6px; text-align: center;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .bubble.show { opacity: 1; }
+
+    #pet-img {
+      width: 150px; height: auto;
+      cursor: grab; transition: transform 0.15s;
+    }
+    #pet-img:active { cursor: grabbing; transform: scale(0.93); }
+
+    #bottom-bar {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 4px;
+    }
+
+    #status {
+      padding: 3px 8px; border-radius: 8px; font-size: 10px; white-space: nowrap;
+    }
+    #status.online { background: #768a5e; color: #fff; }
+    #status.server-only { background: #4a4543; color: #f0e0d0; }
+    #status.disconnected { background: #3c312c; color: #edc095; }
+
+    .bar-btn {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(208,116,86,0.9); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: white; transition: all 0.2s;
+    }
+    .bar-btn:hover { background: rgba(192,96,64,0.95); }
+    .bar-btn.active { background: rgba(102,178,102,0.9); }
+
+    #input-wrap {
+      display: none; align-items: center; gap: 4px;
+      margin-top: 4px;
+    }
+    #input-wrap.show { display: flex; }
+    #chat-input {
+      width: 140px; height: 28px;
+      background: rgba(183,206,198,0.95); border: none; border-radius: 8px;
+      padding: 4px 8px; font-size: 11px; color: #1a1a1a;
+      font-family: 'Noto Sans SC', sans-serif; outline: none; resize: none;
+    }
+    #input-send {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(208,116,86,0.9); border: none; cursor: pointer;
+      color: white; font-size: 12px;
+    }
+
+    #voice-indicator {
+      display: none; margin-top: 4px;
+      padding: 3px 10px; border-radius: 8px;
+      background: rgba(102,178,102,0.9); color: white; font-size: 10px;
+    }
+    #voice-indicator.show { display: block; }
+  </style>
+</head>
+<body>
+  <div id="pet-wrap">
+    <div class="bubble" id="bubble"></div>
+    <img id="pet-img" src="assets/pet_idle.png" alt="pety" draggable="false">
+    <div id="bottom-bar">
+      <span id="status" class="disconnected">无连接</span>
+      <button class="bar-btn" id="chat-btn" title="发消息">💬</button>
+      <button class="bar-btn" id="voice-btn" title="语音">🎤</button>
+    </div>
+    <div id="input-wrap">
+      <input id="chat-input" placeholder="说话..." />
+      <button id="input-send">➤</button>
+    </div>
+    <div id="voice-indicator">自由麦开启中...</div>
+  </div>
+
+  <script>
+    const petWrap = document.getElementById('pet-wrap');
+    const petImg = document.getElementById('pet-img');
+    const bubble = document.getElementById('bubble');
+    const statusEl = document.getElementById('status');
+    const chatBtn = document.getElementById('chat-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const inputWrap = document.getElementById('input-wrap');
+    const chatInput = document.getElementById('chat-input');
+    const inputSend = document.getElementById('input-send');
+    const voiceIndicator = document.getElementById('voice-indicator');
+
+    const EMOTIONS = {
+      idle: 'assets/pet_idle.png', happy: 'assets/pet_idle.png',
+      angry: 'assets/pet_angry.png', shy: 'assets/pet_idle.png',
+      shocked: 'assets/pet_shocked.png'
+    };
+
+    let pokeCount = 0, bubbleTimer, isOnline = false;
+    let chatOpen = false, voiceMode = false;
+
+    // === Report pet bounds to Rust for click-through polling ===
+    function reportBounds() {
+      const rect = petWrap.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      if (window.__TAURI__) {
+        window.__TAURI__.core.invoke('update_pet_bounds', {
+          x: rect.left * dpr,
+          y: rect.top * dpr,
+          w: rect.width * dpr,
+          h: rect.height * dpr
+        });
+      }
+    }
+    setInterval(reportBounds, 100);
+    reportBounds();
+
+    // === Drag pet around screen ===
+    let dragging = false, dragOffX = 0, dragOffY = 0, dragTotalDist = 0;
+
+    petImg.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      dragTotalDist = 0;
+      const rect = petWrap.getBoundingClientRect();
+      dragOffX = e.clientX - rect.left;
+      dragOffY = e.clientY - rect.top;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      dragTotalDist += Math.abs(e.movementX) + Math.abs(e.movementY);
+      const x = e.clientX - dragOffX;
+      const y = e.clientY - dragOffY;
+      petWrap.style.left = x + 'px';
+      petWrap.style.top = y + 'px';
+      petWrap.style.right = 'auto';
+      petWrap.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; });
+
+    // === Click = poke ===
+    petImg.addEventListener('click', () => {
+      if (dragTotalDist > 8) return;
+      pokeCount++;
+      if (window.electronAPI) window.electronAPI.relaySend({ type: 'poke', count: pokeCount });
+      else if (window._wsSend) window._wsSend({ type: 'poke', count: pokeCount });
+      petImg.style.transform = 'scale(0.85)';
+      setTimeout(() => petImg.style.transform = '', 150);
+    });
+
+    // === Bubble ===
+    function showBubble(text, dur) {
+      bubble.textContent = text;
+      bubble.classList.add('show');
+      clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => bubble.classList.remove('show'), dur || 5000);
+    }
+
+    function setEmotion(em) {
+      petImg.src = EMOTIONS[em] || EMOTIONS.idle;
+      if (em !== 'idle') setTimeout(() => { petImg.src = EMOTIONS.idle; }, 5000);
+    }
+
+    // === Chat toggle ===
+    chatBtn.addEventListener('click', () => {
+      chatOpen = !chatOpen;
+      inputWrap.classList.toggle('show', chatOpen);
+      if (chatOpen) { chatInput.focus(); voiceMode = false; voiceIndicator.classList.remove('show'); voiceBtn.classList.remove('active'); }
+      chatBtn.classList.toggle('active', chatOpen);
+    });
+
+    function sendChat() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      if (window.electronAPI) window.electronAPI.relaySend({ type: 'chat', text });
+      else if (window._wsSend) window._wsSend({ type: 'chat', text });
+      if (window.__TAURI__) {
+        window.__TAURI__.event.emit('user-chat', { text: text });
+        try { window.__TAURI__.webviewWindow.WebviewWindow.getByLabel('panel')?.emit('user-chat', { text: text }); } catch(e) {}
+      }
+      chatInput.value = '';
+      showBubble('思考中...');
+    }
+    inputSend.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+    });
+
+    // === Voice toggle ===
+    voiceBtn.addEventListener('click', () => {
+      voiceMode = !voiceMode;
+      voiceBtn.classList.toggle('active', voiceMode);
+      voiceIndicator.classList.toggle('show', voiceMode);
+      if (voiceMode) {
+        chatOpen = false; inputWrap.classList.remove('show'); chatBtn.classList.remove('active');
+        showBubble('语音模式开启');
+        if (window.electronAPI) window.electronAPI.startVoiceServer();
+      } else {
+        showBubble('语音模式关闭');
+        if (window.electronAPI) window.electronAPI.stopVoiceServer();
+      }
+    });
+
+    // === Relay connection ===
+    function handleRelayData(data) {
+      if (data.type === 'status' || data.online !== undefined) {
+        isOnline = data.online;
+        statusEl.textContent = isOnline ? '在线' : '等待琛屿';
+        statusEl.className = isOnline ? 'online' : 'server-only';
+      }
+      if (data.type === 'user-chat') return;
+      if (data.text) showBubble(data.text);
+      if (data.emotion) setEmotion(data.emotion);
+    }
+
+    // Electron: use IPC relay
+    if (window.electronAPI && window.electronAPI.onRelayMessage) {
+      window.electronAPI.onRelayMessage(handleRelayData);
+      statusEl.textContent = '已连接'; statusEl.className = 'server-only';
+    }
+
+    // Tauri or standalone: direct WebSocket
+    if (!window.electronAPI) {
+      const SERVER_URL = 'ws://119.91.115.102:8765';
+      let ws;
+      function connectWs() {
+        ws = new WebSocket(SERVER_URL);
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ role: 'frontend', id: 'pety-tauri-' + Date.now() }));
+          statusEl.textContent = '等待琛屿'; statusEl.className = 'server-only';
+        };
+        ws.onmessage = (event) => {
+          try { handleRelayData(JSON.parse(event.data)); } catch(e) {}
+        };
+        ws.onclose = () => {
+          statusEl.textContent = '无连接'; statusEl.className = 'disconnected';
+          isOnline = false;
+          setTimeout(connectWs, 3000);
+        };
+        ws.onerror = () => ws.close();
+
+        // Override relaySend for Tauri
+        window._wsSend = (data) => {
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(data));
+        };
+      }
+      connectWs();
+    }
+  </script>
+</body>
+</html>

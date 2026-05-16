@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>像素球桌宠 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    color: #ccc;
+    overflow: hidden;
+  }
+
+  .pet-container {
+    position: relative;
+    width: 200px;
+    height: 240px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  /* 身体 - 橘色圆球 */
+  .body {
+    position: absolute;
+    top: 20px;
+    left: 25px;
+    width: 150px;
+    height: 140px;
+    background: #d4845a;
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  /* 眼睛容器 */
+  .eye {
+    position: absolute;
+    width: 30px;
+    height: 32px;
+    background: #2d1810;
+    border-radius: 50%;
+    z-index: 3;
+    overflow: hidden;
+  }
+  .eye-left { top: 70px; left: 62px; }
+  .eye-right { top: 70px; left: 108px; }
+
+  /* 眼球（跟踪鼠标） */
+  .pupil {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    top: 8px;
+    left: 10px;
+    transition: transform 0.1s ease-out;
+  }
+
+  /* 眨眼 */
+  .eye.blink {
+    height: 4px;
+    top: 84px;
+    border-radius: 2px;
+  }
+  .eye.blink .pupil { display: none; }
+
+  /* 嘴巴 */
+  .mouth {
+    position: absolute;
+    z-index: 3;
+    top: 100px;
+    left: 88px;
+    width: 14px;
+    height: 8px;
+    border-radius: 0 0 7px 7px;
+    background: #2d1810;
+    transition: all 0.3s;
+  }
+  .mouth.happy {
+    width: 20px;
+    height: 10px;
+    left: 85px;
+    border-radius: 0 0 10px 10px;
+  }
+  .mouth.shocked {
+    width: 18px;
+    height: 18px;
+    left: 86px;
+    top: 96px;
+    border-radius: 50%;
+  }
+  .mouth.angry {
+    width: 16px;
+    height: 3px;
+    top: 100px;
+    left: 87px;
+    border-radius: 1px;
+  }
+
+  /* 手 */
+  .arm {
+    position: absolute;
+    width: 28px;
+    height: 6px;
+    background: #2d1810;
+    border-radius: 3px;
+    z-index: 1;
+    top: 110px;
+    transition: transform 0.3s ease;
+    transform-origin: right center;
+  }
+  .arm-left {
+    left: 14px;
+    transform: rotate(-15deg);
+    transform-origin: right center;
+  }
+  .arm-right {
+    right: 14px;
+    transform: rotate(15deg);
+    transform-origin: left center;
+  }
+  .arm-left.wave { animation: waveLeft 0.4s ease infinite alternate; }
+  .arm-right.wave { animation: waveRight 0.4s ease infinite alternate; }
+  @keyframes waveLeft { from { transform: rotate(-15deg); } to { transform: rotate(-45deg); } }
+  @keyframes waveRight { from { transform: rotate(15deg); } to { transform: rotate(45deg); } }
+
+  /* 脚 */
+  .leg {
+    position: absolute;
+    width: 6px;
+    height: 28px;
+    background: #2d1810;
+    border-radius: 3px;
+    z-index: 1;
+    top: 155px;
+  }
+  .leg-left { left: 72px; }
+  .leg-right { right: 72px; }
+
+  /* 额头小花 */
+  .forehead {
+    position: absolute;
+    top: 48px;
+    left: 91px;
+    width: 12px;
+    height: 12px;
+    z-index: 4;
+    font-size: 14px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 6px rgba(255,255,255,0.6);
+  }
+
+  /* 腮红 */
+  .blush {
+    position: absolute;
+    width: 18px;
+    height: 10px;
+    background: rgba(255, 120, 100, 0.4);
+    border-radius: 50%;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .blush-left { top: 90px; left: 55px; }
+  .blush-right { top: 90px; right: 55px; }
+  .blush.show { opacity: 1; }
+
+  /* 怒气符号 */
+  .anger {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 24px;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .anger.show { opacity: 1; }
+
+  /* 按钮 */
+  .controls {
+    margin-top: 40px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.15); }
+  .btn.active { background: rgba(212, 132, 90, 0.3); border-color: #d4845a; color: #fff; }
+
+  .hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* 跳动 */
+  .pet-container.bounce { animation: bounce 0.3s ease; }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  /* 摇头 */
+  .pet-container.shake { animation: shake 0.3s ease; }
+  @keyframes shake {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-8deg); }
+    75% { transform: rotate(8deg); }
+  }
+
+  /* 睡觉上下浮动 */
+  .pet-container.sleep-float { animation: sleepFloat 2s ease-in-out infinite; }
+  @keyframes sleepFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .zzz {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 18px;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .zzz.show { opacity: 0.6; animation: zzz 1.5s ease infinite; }
+  @keyframes zzz {
+    0% { transform: translateY(0) scale(1); opacity: 0.6; }
+    100% { transform: translateY(-20px) scale(1.3); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="pet-container" id="pet" onclick="poke()">
+  <div class="body"></div>
+  <div class="eye eye-left" id="eyeL"><div class="pupil" id="pupilL"></div></div>
+  <div class="eye eye-right" id="eyeR"><div class="pupil" id="pupilR"></div></div>
+  <div class="mouth" id="mouth"></div>
+  <div class="arm arm-left" id="armL"></div>
+  <div class="arm arm-right" id="armR"></div>
+  <div class="leg leg-left"></div>
+  <div class="leg leg-right"></div>
+  <div class="forehead">✦</div>
+  <div class="blush blush-left" id="blushL"></div>
+  <div class="blush blush-right" id="blushR"></div>
+  <div class="anger" id="anger">💢</div>
+  <div class="zzz" id="zzz">💤</div>
+</div>
+
+<div class="controls">
+  <button class="btn active" onclick="setMood('idle')">发呆</button>
+  <button class="btn" onclick="setMood('happy')">开心</button>
+  <button class="btn" onclick="setMood('shy')">害羞</button>
+  <button class="btn" onclick="setMood('angry')">生气</button>
+  <button class="btn" onclick="setMood('shocked')">震惊</button>
+  <button class="btn" onclick="setMood('sleep')">睡觉</button>
+  <button class="btn" onclick="setMood('peek')">偷看</button>
+</div>
+<div class="hint">鼠标移动 → 眼睛跟踪 ｜ 点击小球 → 被戳反应</div>
+
+<script>
+const pet = document.getElementById('pet');
+const pupilL = document.getElementById('pupilL');
+const pupilR = document.getElementById('pupilR');
+const eyeL = document.getElementById('eyeL');
+const eyeR = document.getElementById('eyeR');
+const mouth = document.getElementById('mouth');
+const armL = document.getElementById('armL');
+const armR = document.getElementById('armR');
+const blushL = document.getElementById('blushL');
+const blushR = document.getElementById('blushR');
+const anger = document.getElementById('anger');
+const zzz = document.getElementById('zzz');
+
+let currentMood = 'idle';
+let pokeCount = 0;
+
+// 眼睛跟踪鼠标
+document.addEventListener('mousemove', (e) => {
+  if (currentMood === 'sleep') return;
+  const rect = pet.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = (e.clientX - cx) / window.innerWidth * 8;
+  const dy = (e.clientY - cy) / window.innerHeight * 6;
+  pupilL.style.transform = `translate(${dx}px, ${dy}px)`;
+  pupilR.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+
+// 自动眨眼
+setInterval(() => {
+  if (currentMood === 'sleep') return;
+  eyeL.classList.add('blink');
+  eyeR.classList.add('blink');
+  setTimeout(() => {
+    eyeL.classList.remove('blink');
+    eyeR.classList.remove('blink');
+  }, 150);
+}, 3000 + Math.random() * 2000);
+
+// 被戳
+function poke() {
+  pokeCount++;
+  pet.classList.remove('bounce', 'shake');
+  void pet.offsetWidth;
+
+  if (pokeCount % 5 === 0) {
+    setMood('angry');
+    pet.classList.add('shake');
+  } else if (pokeCount % 3 === 0) {
+    setMood('shocked');
+    pet.classList.add('bounce');
+  } else {
+    setMood('happy');
+    pet.classList.add('bounce');
+  }
+
+  setTimeout(() => {
+    pet.classList.remove('bounce', 'shake');
+    setMood('idle');
+  }, 1500);
+}
+
+function setMood(mood) {
+  currentMood = mood;
+  // reset all
+  mouth.className = 'mouth';
+  armL.className = 'arm arm-left';
+  armR.className = 'arm arm-right';
+  blushL.classList.remove('show');
+  blushR.classList.remove('show');
+  anger.classList.remove('show');
+  zzz.classList.remove('show');
+  pet.classList.remove('sleep-float');
+  eyeL.classList.remove('blink');
+  eyeR.classList.remove('blink');
+  eyeL.style.height = '';
+  eyeR.style.height = '';
+
+  // update buttons
+  document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+  const labels = { idle: '发呆', happy: '开心', shy: '害羞', angry: '生气', shocked: '震惊', sleep: '睡觉', peek: '偷看' };
+  document.querySelectorAll('.btn').forEach(b => {
+    if (b.textContent === labels[mood]) b.classList.add('active');
+  });
+
+  switch (mood) {
+    case 'happy':
+      mouth.classList.add('happy');
+      armL.classList.add('wave');
+      armR.classList.add('wave');
+      break;
+    case 'shy':
+      blushL.classList.add('show');
+      blushR.classList.add('show');
+      armL.style.transform = 'rotate(-50deg)';
+      armR.style.transform = 'rotate(50deg)';
+      break;
+    case 'angry':
+      mouth.classList.add('angry');
+      anger.classList.add('show');
+      eyeL.style.height = '20px';
+      eyeR.style.height = '20px';
+      break;
+    case 'shocked':
+      mouth.classList.add('shocked');
+      eyeL.style.height = '38px';
+      eyeR.style.height = '38px';
+      break;
+    case 'sleep':
+      eyeL.classList.add('blink');
+      eyeR.classList.add('blink');
+      zzz.classList.add('show');
+      pet.classList.add('sleep-float');
+      mouth.style.width = '10px';
+      mouth.style.height = '6px';
+      break;
+    case 'peek':
+      eyeL.style.height = '16px';
+      eyeR.style.height = '28px';
+      armR.style.transform = 'rotate(60deg)';
+      break;
+  }
+}
+</script>
+</body>
+</html>
